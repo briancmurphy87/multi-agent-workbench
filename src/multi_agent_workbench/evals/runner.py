@@ -1,0 +1,87 @@
+from __future__ import annotations
+
+from dataclasses import asdict
+from pathlib import Path
+import json
+
+from multi_agent_workbench.agents.critic import CriticAgent
+from multi_agent_workbench.agents.planner import PlannerAgent
+from multi_agent_workbench.agents.responder import ResponderAgent
+from multi_agent_workbench.agents.retriever import RetrieverAgent
+from multi_agent_workbench.llm.client import LLMClient
+from multi_agent_workbench.observability.artifacts import write_run_artifacts
+from multi_agent_workbench.retrieval.corpus import load_corpus
+from multi_agent_workbench.state.models import WorkbenchState
+from multi_agent_workbench.workflows.simple_loop import SimpleWorkflow
+
+from .datasets import load_eval_cases
+from .scoring import score_case
+from ..llm.client_factory import init_llm_client
+
+
+def run_evals(
+    cases_dir: Path,
+    corpus_dir: Path,
+    outputs_dir: Path,
+    summaries_dir: Path,
+    model: str,
+    top_k: int,
+) -> Path:
+    cases = load_eval_cases(cases_dir)
+    corpus = load_corpus(corpus_dir)
+    llm = init_llm_client(model=model)
+
+    outputs_dir.mkdir(parents=True, exist_ok=True)
+    summaries_dir.mkdir(parents=True, exist_ok=True)
+
+    results: list[dict] = []
+
+    for case in cases:
+        workflow = SimpleWorkflow(
+            planner=PlannerAgent(),
+            retriever=RetrieverAgent(corpus=corpus, top_k=top_k),
+            responder=ResponderAgent(llm=llm),
+            critic=CriticAgent(),
+        )
+
+        state = WorkbenchState(user_query=case.query)
+        final_state = workflow.run(state)
+
+        case_output_dir = outputs_dir / case.case_id
+        case_output_dir.mkdir(parents=True, exist_ok=True)
+        write_run_artifacts(final_state, case_output_dir)
+
+        score = score_case(
+            final_answer=final_state.final_answer,
+            expected_keywords=case.expected_keywords,
+            requires_retrieval=case.requires_retrieval,
+            retrieved_count=len(final_state.retrieved_chunks),
+        )
+
+        results.append(
+            {
+                "case_id": case.case_id,
+                "query": case.query,
+                "planner_decision": final_state.planner_decision,
+                "critic_verdict": final_state.critic_verdict,
+                "retrieved_count": len(final_state.retrieved_chunks),
+                "final_answer": final_state.final_answer,
+                "score": asdict(score),
+            }
+        )
+
+    avg_keyword_hit_rate = sum(r["score"]["keyword_hit_rate"] for r in results) / len(results)
+    retrieval_accuracy = sum(
+        1 for r in results if r["score"]["retrieval_used_correctly"]
+    ) / len(results)
+
+    summary = {
+        "num_cases": len(results),
+        "avg_keyword_hit_rate": avg_keyword_hit_rate,
+        "retrieval_accuracy": retrieval_accuracy,
+        "results": results,
+    }
+
+    summary_path = summaries_dir / "summary.json"
+    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    return summary_path

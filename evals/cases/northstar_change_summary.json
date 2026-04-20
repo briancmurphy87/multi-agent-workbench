@@ -1,0 +1,12 @@
+{
+  "id": "northstar_change_summary",
+  "query": "What changed in Northstar's ingestion pipeline between the current architecture and the latest release, and are there any operational caveats mentioned in the runbook?",
+  "expected_keywords": [
+    "streaming ingestion path",
+    "batch-first",
+    "under 90 seconds",
+    "fallback path",
+    "backpressure"
+  ],
+  "requires_retrieval": true
+}

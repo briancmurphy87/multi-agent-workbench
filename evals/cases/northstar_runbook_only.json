@@ -1,0 +1,11 @@
+{
+  "id": "northstar_runbook_only",
+  "query": "What operational caveats does the Northstar runbook mention for v2.4?",
+  "expected_keywords": [
+    "lag exceeds 5 minutes",
+    "batch fallback path",
+    "trace ids",
+    "memory pressure"
+  ],
+  "requires_retrieval": true
+}

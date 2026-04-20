@@ -1,0 +1,10 @@
+{
+  "id": "northstar_insufficient_evidence",
+  "query": "Which team approved the Northstar v2.4 rollout and on what exact date?",
+  "expected_keywords": [
+    "insufficient",
+    "not provided",
+    "not enough evidence"
+  ],
+  "requires_retrieval": true
+}

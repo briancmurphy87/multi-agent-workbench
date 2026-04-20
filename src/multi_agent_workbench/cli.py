@@ -8,7 +8,7 @@ from multi_agent_workbench.agents.planner import PlannerAgent
 from multi_agent_workbench.agents.responder import ResponderAgent
 from multi_agent_workbench.agents.retriever import RetrieverAgent
 from multi_agent_workbench.config import get_settings
-from multi_agent_workbench.llm.client import LLMClient, init_llm_client
+from multi_agent_workbench.llm.client_factory import init_llm_client
 from multi_agent_workbench.observability.artifacts import write_run_artifacts
 from multi_agent_workbench.retrieval.corpus import load_corpus
 from multi_agent_workbench.state.models import WorkbenchState

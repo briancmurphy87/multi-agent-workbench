@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 from typing import Any
-import os
 import time
 
 from multi_agent_workbench.llm.client_state import ClientState
@@ -30,16 +29,6 @@ class LLMClient:
             system_prompt=system_prompt,
             user_prompt=user_prompt,
         )
-
-
-def init_llm_client(model: str, api_key: str | None = None) -> LLMClient:
-    api_key_final = api_key or os.getenv("OPENAI_API_KEY")
-    return LLMClient(
-        model=model,
-        client_state=ClientState(
-            open_api_client=OpenAI(api_key=api_key_final)
-        ),
-    )
 
 
 def _complete_text_openai(

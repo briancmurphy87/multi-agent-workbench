@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from multi_agent_workbench.agents.critic import CriticAgent
@@ -12,7 +11,7 @@ from multi_agent_workbench.retrieval.corpus import load_corpus
 from multi_agent_workbench.state.models import WorkbenchState
 from multi_agent_workbench.workflows.simple_loop import SimpleWorkflow
 
-from tests.client_stub import LLMClientStub
+from multi_agent_workbench.llm.client_stub import LLMClientStub
 
 """
 This gives you a real first test that:

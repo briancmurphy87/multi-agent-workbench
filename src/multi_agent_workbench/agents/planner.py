@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.multi_agent_workbench.state.models import WorkbenchState
+from multi_agent_workbench.state.models import WorkbenchState
 
 
 class PlannerAgent:

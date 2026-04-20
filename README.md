@@ -8,6 +8,13 @@ https://github.com/briancmurphy87/interview-prep-agent
 at this commit: 
 https://github.com/briancmurphy87/interview-prep-agent/commit/b7a82c60d344e001a03ebbda2c92d35249a6cd10
 
+# setup
+
+run this from project root: 
+```shell
+python -m pip install -e ".[dev]"
+```
+
 # v0
 
 - turning the architecture into a real starter scaffold 

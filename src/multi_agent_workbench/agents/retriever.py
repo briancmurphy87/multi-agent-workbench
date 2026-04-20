@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from src.multi_agent_workbench.retrieval.corpus import LoadedCorpus
-from src.multi_agent_workbench.retrieval.search import lexical_search
-from src.multi_agent_workbench.state.models import WorkbenchState
+from multi_agent_workbench.retrieval.corpus import LoadedCorpus
+from multi_agent_workbench.retrieval.search import lexical_search
+from multi_agent_workbench.state.models import WorkbenchState
 
 
 class RetrieverAgent:

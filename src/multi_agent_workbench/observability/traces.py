@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from contextlib import contextmanager
 
-from src.multi_agent_workbench.state.models import AgentStep, WorkbenchState
+from multi_agent_workbench.state.models import AgentStep, WorkbenchState
 
 
 @contextmanager

@@ -3,16 +3,16 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from src.multi_agent_workbench.agents.critic import CriticAgent
-from src.multi_agent_workbench.agents.planner import PlannerAgent
-from src.multi_agent_workbench.agents.responder import ResponderAgent
-from src.multi_agent_workbench.agents.retriever import RetrieverAgent
-from src.multi_agent_workbench.config import get_settings
-from src.multi_agent_workbench.llm.client import LLMClient
-from src.multi_agent_workbench.observability.artifacts import write_run_artifacts
-from src.multi_agent_workbench.retrieval.corpus import load_corpus
-from src.multi_agent_workbench.state.models import WorkbenchState
-from src.multi_agent_workbench.workflows.simple_loop import SimpleWorkflow
+from multi_agent_workbench.agents.critic import CriticAgent
+from multi_agent_workbench.agents.planner import PlannerAgent
+from multi_agent_workbench.agents.responder import ResponderAgent
+from multi_agent_workbench.agents.retriever import RetrieverAgent
+from multi_agent_workbench.config import get_settings
+from multi_agent_workbench.llm.client import LLMClient
+from multi_agent_workbench.observability.artifacts import write_run_artifacts
+from multi_agent_workbench.retrieval.corpus import load_corpus
+from multi_agent_workbench.state.models import WorkbenchState
+from multi_agent_workbench.workflows.simple_loop import SimpleWorkflow
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from src.multi_agent_workbench.agents.critic import CriticAgent
-from src.multi_agent_workbench.agents.planner import PlannerAgent
-from src.multi_agent_workbench.agents.responder import ResponderAgent
-from src.multi_agent_workbench.agents.retriever import RetrieverAgent
-from src.multi_agent_workbench.observability.traces import traced_agent_step
-from src.multi_agent_workbench.state.models import WorkbenchState
+from multi_agent_workbench.agents.critic import CriticAgent
+from multi_agent_workbench.agents.planner import PlannerAgent
+from multi_agent_workbench.agents.responder import ResponderAgent
+from multi_agent_workbench.agents.retriever import RetrieverAgent
+from multi_agent_workbench.observability.traces import traced_agent_step
+from multi_agent_workbench.state.models import WorkbenchState
 
 
 class SimpleWorkflow:

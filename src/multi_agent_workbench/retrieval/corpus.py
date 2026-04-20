@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from src.multi_agent_workbench.retrieval.chunking import chunk_text
+from multi_agent_workbench.retrieval.chunking import chunk_text
 
 
 @dataclass

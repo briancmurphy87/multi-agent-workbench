@@ -3,9 +3,9 @@ from __future__ import annotations
 from collections import Counter
 import math
 
-from src.multi_agent_workbench.retrieval.corpus import LoadedCorpus
+from multi_agent_workbench.retrieval.corpus import LoadedCorpus
 
-from src.multi_agent_workbench.state.models import RetrievedChunk
+from multi_agent_workbench.state.models import RetrievedChunk
 
 
 def _tokenize(text: str) -> list[str]:

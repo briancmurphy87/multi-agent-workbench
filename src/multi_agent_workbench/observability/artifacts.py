@@ -4,7 +4,7 @@ from dataclasses import asdict
 from pathlib import Path
 import json
 
-from src.multi_agent_workbench.state.models import WorkbenchState
+from multi_agent_workbench.state.models import WorkbenchState
 
 
 def write_run_artifacts(state: WorkbenchState, runs_dir: Path) -> Path:

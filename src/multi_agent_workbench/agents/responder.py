@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from src.multi_agent_workbench.llm.client import LLMClient
-from src.multi_agent_workbench.state.models import WorkbenchState
+from multi_agent_workbench.llm.client import LLMClient
+from multi_agent_workbench.state.models import WorkbenchState
 
 
 class ResponderAgent:

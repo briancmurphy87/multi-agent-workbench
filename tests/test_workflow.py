@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from multi_agent_workbench.agents.critic import CriticAgent
 from multi_agent_workbench.agents.planner import PlannerAgent
 from multi_agent_workbench.agents.responder import ResponderAgent
 from multi_agent_workbench.agents.retriever import RetrieverAgent
-from multi_agent_workbench.llm.client import LLMClient
 from multi_agent_workbench.observability.artifacts import write_run_artifacts
 from multi_agent_workbench.retrieval.corpus import load_corpus
 from multi_agent_workbench.state.models import WorkbenchState
 from multi_agent_workbench.workflows.simple_loop import SimpleWorkflow
+
+from tests.client_stub import LLMClientStub
 
 """
 This gives you a real first test that:
@@ -54,7 +56,7 @@ def test_simple_workflow_runs_end_to_end(tmp_path: Path) -> None:
     )
 
     corpus = load_corpus(corpus_dir)
-    llm = LLMClient(model="stub-model")
+    llm = LLMClientStub()
     workflow = SimpleWorkflow(
         planner=PlannerAgent(),
         retriever=RetrieverAgent(corpus=corpus, top_k=5),
@@ -90,3 +92,7 @@ def test_run_artifacts_are_written(tmp_path: Path) -> None:
     assert (run_dir / "trace.json").exists()
     assert (run_dir / "retrieved_chunks.json").exists()
     assert (run_dir / "artifacts.json").exists()
+
+
+# if __name__ == "__main__":
+#     dir_curr: Path = Path(os.getcwd())

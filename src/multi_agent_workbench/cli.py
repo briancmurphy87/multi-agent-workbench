@@ -8,7 +8,7 @@ from multi_agent_workbench.agents.planner import PlannerAgent
 from multi_agent_workbench.agents.responder import ResponderAgent
 from multi_agent_workbench.agents.retriever import RetrieverAgent
 from multi_agent_workbench.config import get_settings
-from multi_agent_workbench.llm.client import LLMClient
+from multi_agent_workbench.llm.client import LLMClient, init_llm_client
 from multi_agent_workbench.observability.artifacts import write_run_artifacts
 from multi_agent_workbench.retrieval.corpus import load_corpus
 from multi_agent_workbench.state.models import WorkbenchState
@@ -34,7 +34,7 @@ def main() -> None:
     if args.command == "ask":
         corpus_dir = Path(args.corpus_dir) if args.corpus_dir else settings.corpus_dir
         corpus = load_corpus(corpus_dir)
-        llm = LLMClient(model=settings.model)
+        llm = init_llm_client(model=settings.model)
         workflow = SimpleWorkflow(
             planner=PlannerAgent(),
             retriever=RetrieverAgent(corpus=corpus, top_k=settings.top_k),

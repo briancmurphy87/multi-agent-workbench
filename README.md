@@ -1,12 +1,8 @@
-# summary
+# multi-agent-workbench
 
-sandbox for experimenting with multi-agent systems
+A small, observable multi-agent system for retrieval, reasoning, tool use, and evaluation.
 
-forked from this repo: 
-https://github.com/briancmurphy87/interview-prep-agent
-
-at this commit: 
-https://github.com/briancmurphy87/interview-prep-agent/commit/b7a82c60d344e001a03ebbda2c92d35249a6cd10
+This repository began as a fork of `interview-prep-agent`, then was generalized into a domain-neutral sandbox for experimenting with multi-agent workflows over local document corpora.
 
 # setup
 
@@ -15,14 +11,10 @@ run this from project root:
 python -m pip install -e ".[dev]"
 ```
 
-# v0
+## Current status
 
-- turning the architecture into a real starter scaffold 
-- choosing a small demo corpus/query 
-    - so the repo has an immediate, believable first run.
+v0 focuses on one end-to-end workflow over a small local corpus:
 
-## Goal
-- Get to one end-to-end run over 3–5 local docs with:
     - planner agent
     - retriever agent
     - responder agent
@@ -30,45 +22,47 @@ python -m pip install -e ".[dev]"
     - simple orchestration loop
     - retrieval traces
     - per-run artifacts
-- The repo should read as a general multi-agent systems project, 
-  - not a resume-specific app.
 
-## Suggested first example
-- Use a small neutral corpus about a fictional open-source project called **Northstar**.
-- This avoids "enterprise theater" while still creating realistic retrieval and tool-use behavior.
+The goal is to make agent runs easy to inspect, debug, and evaluate.
 
-### Local docs for v0
-Create these 5 docs under `data/corpus/docs/`:
+
+### First example corpus
+The initial demo corpus is a fictional open-source data platform called **Northstar**.
+
+Documents live under `data/corpus/docs/`:
 1. `overview.md`
 2. `architecture.md`
 3. `roadmap.md`
 4. `release_notes.md`
 5. `runbook.md`
 
-### Example end-to-end query
+### Example Query
+
 ```plain text
 What changed in Northstar's ingestion pipeline between the current architecture and the latest release, and are there any operational caveats mentioned in the runbook?
 ```
-Why this is a good v0 query:
-- requires retrieval across multiple docs
-- requires synthesis, not just lookup
-- can be judged for grounding
-- creates room for critic/retry behavior
-- feels natural for a general agent workbench
 
+This is a good first query because it requires:
+- retrieval across multiple documents
+- synthesis rather than simple lookup
+- grounded answer generation
+- critic validation
+- per-run tracing
+
+
+#### Running from Command Line
 ```shell
-python -m src.multi_agent_workbench.cli ask \
+python -m multi_agent_workbench.cli ask \
   --query "What changed in Northstar's ingestion pipeline between the current architecture and the latest release, and are there any operational caveats mentioned in the runbook?"
 ```
-
-#### Expected behavior
+##### You Should See
 - planner decides retrieval is needed
 - retriever pulls chunks from `architecture.md`, `release_notes.md`, and `runbook.md`
 - responder synthesizes answer with citations
 - critic checks citations
 - artifacts are written under `runs/<run_id>/`
 
-#### Realized Output
+##### Realized Output
 ```plain text
 STUB_RESPONSE
 
@@ -84,8 +78,19 @@ Northstar is an ...
 Artifacts written to: runs/048e07f6-2f98-477a-be0e-f4e7b7bc9b19
 ```
 
+### Run artifacts
+Each run writes artifacts to:
+```plain text
+runs/<run_id>/
+```
+Current outputs include:
+- `final_answer.md`
+- `trace.json`
+- `retrieved_chunks.json`
+- `artifacts.json`
 
-## Suggested v0 milestone plan
+
+## v0 milestone plan
 
 ### Milestone 1: generalize the bones
 - Do this first.

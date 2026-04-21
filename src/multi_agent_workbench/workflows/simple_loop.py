@@ -81,11 +81,11 @@ class SimpleWorkflow:
                 "retry_instruction": supervisor_decision.retry_instruction,
             }
 
-        # agent = responder (optional)
+        # agent = responder (optional 'retry')
         if verdict == "retry_with_citations":
             with traced_agent_step(state, self.responder.name, "respond_retry", state.user_query) as step:
                 retry_prefix = "Revise the prior answer to ensure every claim is supported by cited evidence.\n\n"
-                state.user_query = retry_prefix + state.user_query
+
                 self.responder.run(state)
                 step["output_summary"] = "retried_with_citations"
 

@@ -1,84 +1,107 @@
-# Table of Contents
-
-<!-- TOC -->
-* [multi-agent-workbench](#multi-agent-workbench)
-* [setup](#setup)
-* [Example run (multi-agent workflow)](#example-run-multi-agent-workflow)
-  * [Step 1: Run a real example](#step-1-run-a-real-example)
-  * [Step 2: Extract the pieces](#step-2-extract-the-pieces)
-    * [Query](#query)
-    * [Planner decision](#planner-decision)
-    * [Retrieved evidence (top chunks)](#retrieved-evidence-top-chunks)
-    * [Critic verdict](#critic-verdict)
-    * [Supervisor decision](#supervisor-decision)
-    * [Final answer](#final-answer)
-  * [What this demonstrates](#what-this-demonstrates)
-  * [Evaluation summary](#evaluation-summary)
-<!-- TOC -->
-
 
 # multi-agent-workbench
 
-- A compact multi-agent RAG workbench 
-- for experimenting with planner/retriever/responder/critic/supervisor workflows over a local corpus with: 
-  - explicit traces
-  - artifacts
-  - evals
+A compact multi-agent RAG workbench for experimenting with:
 
+* planner / retriever / responder / critic / supervisor workflows
+* explicit execution traces and artifacts
+* dataset-driven evaluation (LLM-as-judge style)
+* interchangeable orchestration layers (plain Python vs LangGraph)
 
-This repository began as a fork of `interview-prep-agent`, then was generalized into a domain-neutral sandbox for experimenting with multi-agent workflows over local document corpora.
+---
 
-# setup
+## Summary
 
-run this from project root: 
-```shell
+This repo is a minimal but complete example of:
+
+> how to build, observe, and evaluate a multi-agent LLM system — and evolve it from simple orchestration to graph-based execution without breaking behavior.
+
+## Why this repo exists
+
+Most “AI agent” demos are:
+
+* opaque (no traceability)
+* untestable (no eval harness)
+* brittle (no retry or supervision loop)
+
+This repo is a minimal but **fully observable + testable** system that shows:
+
+* how to structure a multi-agent workflow
+* how to debug it via artifacts
+* how to evaluate it systematically
+* how to swap orchestration layers without rewriting logic
+
+---
+
+## Architecture
+
+The system is built around a shared state object (`WorkbenchState`) and five agents:
+
+* **Planner** → decides execution strategy
+* **Retriever** → selects relevant document chunks
+* **Responder** → drafts an answer
+* **Critic** → evaluates grounding / citations
+* **Supervisor** → decides: accept, retry, or finalize
+
+Key properties:
+
+* all agents operate on shared mutable state
+* every step emits structured trace events
+* artifacts are persisted per run
+* retry is **supervisor-driven**, not heuristic
+
+---
+
+### 1. SimpleWorkflow (baseline)
+
+* explicit Python control flow
+* easy to reason about
+* ideal for debugging and iteration
+
+### 2. LangGraphWorkflow
+
+* graph-based execution model
+* explicit branching and retry loops
+* same agents, state, artifacts, and eval harness
+
+Both workflows produce identical outputs and pass the same tests.
+
+---
+
+## Quickstart
+
+```bash
 python -m pip install -e ".[dev]"
 ```
 
-# Example run (multi-agent workflow)
+Run an example:
 
-This example shows how the system processes a query end-to-end using:
-
-- planner → decides execution strategy
-- retriever → fetches relevant document chunks
-- responder → drafts an answer
-- critic → evaluates grounding and citations
-- supervisor → decides whether to accept, retry, or finalize
-
-The initial demo corpus is a fictional open-source data platform called **Northstar**.
-
-Documents live under `data/corpus/docs/`:
-1. `overview.md`
-2. `architecture.md`
-3. `roadmap.md`
-4. `release_notes.md`
-5. `runbook.md`
-
-## Step 1: Run a real example
-```shell
+```bash
 OPENAI_MODEL=stub-model python -m multi_agent_workbench.cli ask \
-  --query "Retry-demo: what changed in Northstar's ingestion pipeline and what operational caveats are mentioned in the runbook?"
+  --query "retry-demo: what changed in Northstar's ingestion pipeline and what operational caveats are mentioned in the runbook?"
 ```
 
-Then open:
-```shell
+Then inspect:
+
+```bash
 runs/<run_id>/
 ```
 
-And grab:
-- `trace.json`
-- `retrieved_chunks.json`
-- `final_answer.md`
-- `artifacts.json`
+Artifacts:
 
-## Step 2: Extract the pieces
+* `trace.json`
+* `retrieved_chunks.json`
+* `final_answer.md`
+* `artifacts.json`
 
-From artifacts, you want to manually pull:
+---
+
+## Example run (end-to-end)
 
 ### Query
 
 ```
-Retry-demo: what changed in Northstar's ingestion pipeline and what operational caveats are mentioned in the runbook?
+retry-demo: what changed in Northstar's ingestion pipeline and what operational caveats are mentioned in the runbook?
 ```
 
 ### Planner decision
@@ -96,10 +119,9 @@ Content:
   "answer_strategy": "synthesize_across_docs",
   "rationale": "The query requires synthesizing changes across architecture and release notes, and extracting operational caveats from the runbook."
 }
-
 ```
-### Retrieved evidence (top chunks)
 
+### Retrieved evidence (top chunks)
 
 Output snippet of form `[{doc_id}]` followed by first ~1-2 lines
 ```
@@ -152,18 +174,40 @@ The runbook notes that if stream processor lag exceeds 5 minutes, operators shou
 ```
 
 ## What this demonstrates
-- planner correctly routes the query to retrieval
-- retriever gathers evidence across multiple documents
-- responder synthesizes a grounded answer
-- critic detects missing citations in the first draft
-- supervisor triggers a retry with stricter instructions
-- final answer is improved and properly grounded
 
+* planner routes correctly to retrieval
+* retriever surfaces relevant cross-document evidence
+* responder synthesizes an answer
+* critic detects missing citations
+* supervisor triggers retry
+* retry produces improved grounded output
+
+---
 
 ## Evaluation summary
 
-trimmed version of contents generated at `evals/summaries/summary.json`:
+Run:
 
+```bash
+python -m multi_agent_workbench.cli eval
+```
+
+Writes output to:
+
+```
+evals/summaries/summary.json
+```
+
+Example metrics:
+
+* planner accuracy
+* retrieval correctness
+* supervisor action accuracy
+* retry execution correctness
+
+This turns the system into something you can **measure, not just demo**.
+
+Snippet of output content:
 ```json
 {
   "num_cases": 4,
@@ -221,3 +265,58 @@ trimmed version of contents generated at `evals/summaries/summary.json`:
   ]
 }
 ```
+---
+
+## Real corpora (beyond the toy example)
+
+The repo includes a small fictional corpus (**Northstar**) for deterministic tests.
+
+The same system can be run against real-world documentation, such as:
+
+* SQLite docs (recommended first target)
+* Kubernetes docs
+* RFCs (e.g. HTTP / RFC 9110)
+* Python documentation
+
+Example real queries:
+
+* “What changed in SQLite JSON support across recent releases?”
+* “What operational caveats are mentioned for WAL mode?”
+* “How does Kubernetes describe Deployment vs StatefulSet tradeoffs?”
+
+---
+
+## Project structure
+
+```
+agents/           → planner, retriever, responder, critic, supervisor
+workflows/        → SimpleWorkflow + LangGraphWorkflow
+state/            → shared state model
+retrieval/        → corpus + chunking
+evals/            → dataset + scoring
+observability/    → traces + artifact writers
+llm/              → stub + OpenAI client
+```
+
+---
+
+## What’s interesting here (for engineers)
+
+* explicit state machine vs graph orchestration comparison
+* supervisor-driven retry loop (bounded, testable)
+* artifact-first debugging (not prompt guessing)
+* eval harness integrated into development loop
+* easy extension point for tools, memory, or multi-step planning
+
+---
+
+## Next extensions
+
+* real-world corpus ingestion (SQLite / RFCs)
+* tool-use agent (search, calculator, API calls)
+* multi-hop planning (planner chaining steps)
+* caching + cost tracking
+* UI for trace visualization
+
+---
+

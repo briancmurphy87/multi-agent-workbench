@@ -1,23 +1,17 @@
 from __future__ import annotations
 
+import json
 from dataclasses import asdict
 from pathlib import Path
-import json
 
-from multi_agent_workbench.agents.critic import CriticAgent
-from multi_agent_workbench.agents.planner import PlannerAgent
-from multi_agent_workbench.agents.responder import ResponderAgent
-from multi_agent_workbench.agents.retriever import RetrieverAgent
-from multi_agent_workbench.agents.supervisor import SupervisorAgent
+from multi_agent_workbench.evals.datasets import load_eval_cases
+from multi_agent_workbench.evals.scoring import score_case
 from multi_agent_workbench.llm.client_base import LLMClientABC
+from multi_agent_workbench.llm.client_factory import init_llm_client
 from multi_agent_workbench.observability.artifacts import write_run_artifacts
 from multi_agent_workbench.retrieval.corpus import load_corpus
 from multi_agent_workbench.state.models import WorkbenchState
-from multi_agent_workbench.workflows.simple_loop import SimpleWorkflow
-
-from .datasets import load_eval_cases
-from .scoring import score_case
-from ..llm.client_factory import init_llm_client
+from multi_agent_workbench.workflows.workflow_factory import init_workflow
 
 
 def run_evals(
@@ -38,12 +32,10 @@ def run_evals(
     results: list[dict] = []
 
     for case in cases:
-        workflow = SimpleWorkflow(
-            planner=PlannerAgent(llm=llm),
-            retriever=RetrieverAgent(corpus=corpus, top_k=top_k),
-            responder=ResponderAgent(llm=llm),
-            critic=CriticAgent(),
-            supervisor=SupervisorAgent(),
+        workflow = init_workflow(
+            corpus=corpus,
+            top_k=top_k,
+            llm=llm,
         )
 
         state = WorkbenchState(user_query=case.query)
@@ -103,9 +95,9 @@ def run_evals(
                 "case_id": case.case_id,
                 "query": case.query,
                 "planner_decision": (
-                    asdict(final_state.planner_decision)
-                    if final_state.planner_decision is not None
-                    else None
+                    None
+                    if final_state.planner_decision is None
+                    else final_state.planner_decision.model_dump(mode='json')
                 ),
                 "supervisor_decision": (
                     asdict(final_state.supervisor_decision)

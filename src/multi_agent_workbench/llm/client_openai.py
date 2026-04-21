@@ -7,21 +7,25 @@ from typing import Any
 from openai import OpenAI
 
 from multi_agent_workbench.llm.client_base import LLMClientABC
-from multi_agent_workbench.llm.client_state import ClientState
 from multi_agent_workbench.llm.result import LLMResult
 
 
 class LLMClientOpenAI(LLMClientABC):
-    def __init__(self, model: str, client_state: ClientState) -> None:
+    def __init__(
+            self, 
+            model: str, 
+            open_api_client: OpenAI,
+    ) -> None:
         assert model != "stub-model", f"invalid model: {model}"
-        assert client_state.open_api_client is not None, "did not initialize OpenAI client"
-        super().__init__(model, client_state)
+        assert open_api_client is not None, "did not initialize OpenAI client"
+        super().__init__(model)
+        self._open_api_client = open_api_client
 
     def complete_text(self, system_prompt: str, user_prompt: str) -> LLMResult:
-        assert self._client_state.open_api_client is not None, "did not initialize OpenAI client"
+        assert self._open_api_client is not None, "did not initialize OpenAI client"
         return _complete_text_openai(
             model=self.model,
-            client=self._client_state.open_api_client,
+            client=self._open_api_client,
             system_prompt=system_prompt,
             user_prompt=user_prompt,
         )

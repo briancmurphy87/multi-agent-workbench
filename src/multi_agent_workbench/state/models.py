@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
 import time
 import uuid
+from dataclasses import dataclass
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 from multi_agent_workbench.agents.planner_models import PlannerDecision
 
@@ -43,20 +45,19 @@ class SupervisorDecision:
     retry_instruction: str | None = None
 
 
-@dataclass
-class WorkbenchState:
+class WorkbenchState(BaseModel):
     user_query: str
-    run_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    conversation_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    created_at: float = field(default_factory=time.time)
+    run_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    conversation_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: float = Field(default_factory=time.time)
     planner_decision: PlannerDecision | None = None
-    retrieved_chunks: list[RetrievedChunk] = field(default_factory=list)
-    tool_calls: list[ToolCall] = field(default_factory=list)
-    agent_steps: list[AgentStep] = field(default_factory=list)
+    retrieved_chunks: list[RetrievedChunk] = Field(default_factory=list)
+    tool_calls: list[ToolCall] = Field(default_factory=list)
+    agent_steps: list[AgentStep] = Field(default_factory=list)
     draft_answer: str | None = None
     final_answer: str | None = None
     critic_verdict: str | None = None
-    notes: list[str] = field(default_factory=list)
-    artifacts: dict[str, Any] = field(default_factory=dict)
+    notes: list[str] = Field(default_factory=list)
+    artifacts: dict[str, Any] = Field(default_factory=dict)
     supervisor_decision: SupervisorDecision | None = None
     retry_count: int = 0

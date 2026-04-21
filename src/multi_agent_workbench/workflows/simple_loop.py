@@ -26,7 +26,46 @@ class SimpleWorkflow:
 
     def run(self, state: WorkbenchState) -> WorkbenchState:
         # agent = planner -> proposes a path
-        with traced_agent_step(state, self.planner.name, "plan", state.user_query) as step:
+        self._plan(state=state)
+
+        # agent = retrieval (optional)
+        self._retrieve(state=state)
+
+        # agent = responder
+        self._respond(state=state)
+
+        # agent = critic -> assesses output quality
+        self._critique(state=state)
+
+        # agent = supervisor -> decides next action
+        self._supervise(state=state)
+
+        # handle 'agent = supervisor' action (iteratively)
+        while (
+                state.supervisor_decision is not None
+                and state.supervisor_decision.action == "retry_responder"
+                and state.retry_count < 1
+        ):
+            self._respond_retry(state=state)
+            self._critique_retry(state=state)
+            self._supervise(state=state)
+
+        # finalize draft from this run
+        self._finalize(state=state)
+        return state
+
+
+    def _plan(
+        self,
+        state: WorkbenchState,
+    ) -> None:
+        with traced_agent_step(
+                state,
+                self.planner.name,
+                "plan",
+                state.user_query
+        ) as step:
+
             decision = self.planner.run(state)
             # store rationale
             step["output_summary"] = (
@@ -44,82 +83,108 @@ class SimpleWorkflow:
                 "rationale": decision.rationale,
             }
 
-        # agent = retrieval (optional)
-        if decision.needs_retrieval:
-            with traced_agent_step(state, self.retriever.name, "retrieve", state.user_query) as step:
-                self.retriever.run(state)
-                step["output_summary"] = f"retrieved={len(state.retrieved_chunks)}"
+    def _retrieve(
+        self,
+        state: WorkbenchState,
+    ) -> None:
+        if state.planner_decision is None or not state.planner_decision.needs_retrieval:
+            return
 
-        # agent = responder
-        with traced_agent_step(state, self.responder.name, "respond", state.user_query) as step:
+        with traced_agent_step(
+                state,
+                self.retriever.name,
+                "retrieve",
+                state.user_query
+        ) as step:
+
+            self.retriever.run(state)
+            step["output_summary"] = f"retrieved={len(state.retrieved_chunks)}"
+
+    def _respond(
+        self,
+        state: WorkbenchState,
+    ) -> None:
+        with traced_agent_step(
+                state,
+                self.responder.name,
+                "respond",
+                state.user_query
+        ) as step:
             self.responder.run(state)
             step["output_summary"] = (state.draft_answer or "")[:160]
 
-        # agent = critic -> assesses output quality
-        with traced_agent_step(state, self.critic.name, "critique", state.user_query) as step:
+    def _critique(
+        self,
+        state: WorkbenchState,
+    ) -> None:
+        with traced_agent_step(
+                state, self.critic.name, "critique", state.user_query
+        ) as step:
             verdict = self.critic.run(state)
             step["output_summary"] = verdict
 
-        # agent = supervisor -> decides next action
-        with traced_agent_step(state, self.supervisor.name, "supervise", state.user_query) as step:
-            supervisor_decision = self.supervisor.run(state)
+    def _supervise(
+        self,
+        state: WorkbenchState,
+    ) -> None:
+        with traced_agent_step(
+                state, self.supervisor.name, "supervise", state.user_query
+        ) as step:
+            decision = self.supervisor.run(state)
             step["output_summary"] = (
-                f"action={supervisor_decision.action}; "
-                f"rationale={supervisor_decision.rationale[:120]}"
+                f"action={decision.action}; "
+                f"rationale={decision.rationale[:120]}"
             )
-            # handle 'agent = supervisor' action
-            state = _handle_supervisor_action(
-                supervisor_decision=supervisor_decision,
-                state=state,
-                responder=self.responder,
-                critic=self.critic,
-            )
+
             # store supervisor artifacts
             state.artifacts["supervisor"] = {
-                "action": supervisor_decision.action,
-                "rationale": supervisor_decision.rationale,
-                "retry_instruction": supervisor_decision.retry_instruction,
+                "action": decision.action,
+                "rationale": decision.rationale,
+                "retry_instruction": decision.retry_instruction,
             }
 
-        # finalize draft
-        if state.final_answer is None:
-            state.final_answer = state.draft_answer
-        return state
+            state.supervisor_decision = decision
 
+    def _respond_retry(
+        self,
+        state: WorkbenchState,
+    ) -> None:
 
-def _handle_supervisor_action(
-    supervisor_decision: SupervisorDecision,
-    state: WorkbenchState,
-    responder: ResponderAgent,
-    critic: CriticAgent,
-) -> WorkbenchState:
-    if supervisor_decision.action == "retry_responder":
         with traced_agent_step(
                 state,
-                responder.name,
+                self.responder.name,
                 "respond_retry",
                 state.user_query
         ) as step:
-            responder.run(
+            self.responder.run(
                 state,
-                revision_instruction=supervisor_decision.retry_instruction,
+                revision_instruction=state.supervisor_decision.retry_instruction,
             )
             step["output_summary"] = "retried_with_supervisor_instruction"
             state.retry_count += 1
 
-        with traced_agent_step(state, critic.name, "critique_retry", state.user_query) as step:
-            verdict = critic.run(state)
+    def _critique_retry(
+        self,
+        state: WorkbenchState,
+    ) -> None:
+        with traced_agent_step(
+                state,
+                self.critic.name,
+                "critique_retry",
+                state.user_query
+        ) as step:
+            verdict = self.critic.run(state)
             step["output_summary"] = verdict
 
-        state.final_answer = state.draft_answer
+    def _finalize(self, state: WorkbenchState) -> None:
+        if state.supervisor_decision is None:
+            state.final_answer = state.draft_answer
+            return
 
-    elif supervisor_decision.action == "finalize_insufficient_evidence":
-        state.final_answer = (
+        if state.supervisor_decision.action == "finalize_insufficient_evidence":
+            state.final_answer = (
                 state.draft_answer
                 or "I do not have enough evidence in the retrieved documents to answer confidently."
-        )
-
-    else:
-        state.final_answer = state.draft_answer
-
-    return state
+            )
+        else:
+            state.final_answer = state.draft_answer

@@ -13,7 +13,7 @@ class EvalCase:
     requires_retrieval: bool
     expected_planner_mode: str
     expected_needs_tools: bool
-
+    expected_supervisor_action: str
 
 def load_eval_cases(cases_dir: Path) -> list[EvalCase]:
     cases: list[EvalCase] = []
@@ -27,6 +27,7 @@ def load_eval_cases(cases_dir: Path) -> list[EvalCase]:
                 requires_retrieval=data["requires_retrieval"],
                 expected_planner_mode=data["expected_planner_mode"],
                 expected_needs_tools=data["expected_needs_tools"],
+                expected_supervisor_action=data["expected_supervisor_action"],
             )
         )
     return cases

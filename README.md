@@ -1,20 +1,19 @@
+# Table of Contents
+
 <!-- TOC -->
 * [multi-agent-workbench](#multi-agent-workbench)
 * [setup](#setup)
-* [Current status (v0)](#current-status-v0)
-    * [First example corpus](#first-example-corpus)
-    * [Example Query](#example-query)
-      * [Running from Command Line](#running-from-command-line)
-        * [You Should See](#you-should-see)
-        * [Realized Output](#realized-output)
-    * [Run artifacts](#run-artifacts)
-  * [v0 milestone plan](#v0-milestone-plan)
-    * [Milestone 1: generalize the bones](#milestone-1-generalize-the-bones)
-    * [Milestone 2: explicit multi-agent loop](#milestone-2-explicit-multi-agent-loop)
-    * [Milestone 3: retrieval + artifacts](#milestone-3-retrieval--artifacts)
-    * [Milestone 4: eval harness](#milestone-4-eval-harness)
-    * [Milestone 5: supervisor / retry logic](#milestone-5-supervisor--retry-logic)
-    * [Milestone 6: LangGraph](#milestone-6-langgraph)
+* [Example run (multi-agent workflow)](#example-run-multi-agent-workflow)
+  * [Step 1: Run a real example](#step-1-run-a-real-example)
+  * [Step 2: Extract the pieces](#step-2-extract-the-pieces)
+    * [Query](#query)
+    * [Planner decision](#planner-decision)
+    * [Retrieved evidence (top chunks)](#retrieved-evidence-top-chunks)
+    * [Critic verdict](#critic-verdict)
+    * [Supervisor decision](#supervisor-decision)
+    * [Final answer](#final-answer)
+  * [What this demonstrates](#what-this-demonstrates)
+  * [Evaluation summary](#evaluation-summary)
 <!-- TOC -->
 
 
@@ -45,6 +44,15 @@ This example shows how the system processes a query end-to-end using:
 - responder → drafts an answer
 - critic → evaluates grounding and citations
 - supervisor → decides whether to accept, retry, or finalize
+
+The initial demo corpus is a fictional open-source data platform called **Northstar**.
+
+Documents live under `data/corpus/docs/`:
+1. `overview.md`
+2. `architecture.md`
+3. `roadmap.md`
+4. `release_notes.md`
+5. `runbook.md`
 
 ## Step 1: Run a real example
 ```shell
@@ -213,81 +221,3 @@ trimmed version of contents generated at `evals/summaries/summary.json`:
   ]
 }
 ```
-
-# Current status (v0)
-
-v0 focuses on one end-to-end workflow over a small local corpus:
-- planner agent
-- retriever agent
-- responder agent
-- critic agent
-- simple orchestration loop
-- retrieval traces
-- per-run artifacts
-
-The goal is to make agent runs easy to inspect, debug, and evaluate.
-
-
-### First example corpus
-The initial demo corpus is a fictional open-source data platform called **Northstar**.
-
-Documents live under `data/corpus/docs/`:
-1. `overview.md`
-2. `architecture.md`
-3. `roadmap.md`
-4. `release_notes.md`
-5. `runbook.md`
-
-### Example Query
-
-```plain text
-What changed in Northstar's ingestion pipeline between the current architecture and the latest release, and are there any operational caveats mentioned in the runbook?
-```
-
-This is a good first query because it requires:
-- retrieval across multiple documents
-- synthesis rather than simple lookup
-- grounded answer generation
-- critic validation
-- per-run tracing
-
-
-#### Running from Command Line
-```shell
-python -m multi_agent_workbench.cli ask \
-  --query "What changed in Northstar's ingestion pipeline between the current architecture and the latest release, and are there any operational caveats mentioned in the runbook?"
-```
-##### You Should See
-- planner decides retrieval is needed
-- retriever pulls chunks from `architecture.md`, `release_notes.md`, and `runbook.md`
-- responder synthesizes answer with citations
-- critic checks citations
-- artifacts are written under `runs/<run_id>/`
-
-##### Realized Output
-```plain text
-STUB_RESPONSE
-
-System prompt: You are a careful research assistant. Answer only from provided evidence. If evidence is insufficient, say so. Include c...
-User prompt: Question:
-What changed in Northstar's ingestion pipeline between the current architecture and the latest release, and are there any operational caveats mentioned in the runbook?
-
-Evidence:
-[overview-0] # Northstar Overview
-
-Northstar is an ...
-
-Artifacts written to: runs/048e07f6-2f98-477a-be0e-f4e7b7bc9b19
-```
-
-### Run artifacts
-Each run writes artifacts to:
-```plain text
-runs/<run_id>/
-```
-Current outputs include:
-- `final_answer.md`
-- `trace.json`
-- `retrieved_chunks.json`
-- `artifacts.json`
-

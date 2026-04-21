@@ -11,6 +11,8 @@ class EvalScore:
     planner_mode_correct: bool
     planner_tools_correct: bool
     planner_retrieval_correct: bool
+    supervisor_action_correct: bool
+    insufficient_evidence_handled_correctly: bool
 
 
 def score_case(
@@ -23,6 +25,8 @@ def score_case(
     planner_needs_retrieval: bool | None,
     expected_planner_mode: str,
     expected_needs_tools: bool,
+    supervisor_action: str | None,
+    expected_supervisor_action: str,
 ) -> EvalScore:
     answer = (final_answer or "").lower()
     hits = sum(1 for kw in expected_keywords if kw.lower() in answer)
@@ -35,6 +39,23 @@ def score_case(
     planner_tools_correct = planner_needs_tools == expected_needs_tools
     planner_retrieval_correct = planner_needs_retrieval == requires_retrieval
 
+    supervisor_action_correct = supervisor_action == expected_supervisor_action
+
+    insufficient_evidence_handled_correctly = True
+    if expected_supervisor_action == "finalize_insufficient_evidence":
+        insufficient_evidence_handled_correctly = (
+            supervisor_action == "finalize_insufficient_evidence"
+            and any(
+                phrase in answer
+                for phrase in [
+                    "not enough evidence",
+                    "insufficient",
+                    "not provided",
+                    "cannot answer confidently",
+                ]
+            )
+        )
+
     return EvalScore(
         keyword_hit_rate=keyword_hit_rate,
         retrieval_used_correctly=retrieval_used_correctly,
@@ -42,4 +63,6 @@ def score_case(
         planner_mode_correct=planner_mode_correct,
         planner_tools_correct=planner_tools_correct,
         planner_retrieval_correct=planner_retrieval_correct,
+        supervisor_action_correct=supervisor_action_correct,
+        insufficient_evidence_handled_correctly=insufficient_evidence_handled_correctly,
     )

@@ -43,11 +43,29 @@ class LLMClientStub(LLMClient):
 
 def _complete_text_stub(model: str, system_prompt: str, user_prompt: str) -> LLMResult:
     started = time.perf_counter()
-    text = (
-        "STUB_RESPONSE\n\n"
-        f"System prompt: {system_prompt[:120]}...\n"
-        f"User prompt: {user_prompt[:240]}..."
-    )
+    lowered = user_prompt.lower()
+
+    if "retry-demo" in lowered:
+        if "instruction:" in lowered and "supported by cited evidence" in lowered:
+            text = (
+                "Northstar moved from a batch-first ingestion design to adding a streaming path "
+                "for high-priority traffic, reducing latency to under 90 seconds [release_notes-0]. "
+                "The runbook notes that if stream processor lag exceeds 5 minutes, operators should "
+                "divert traffic to the batch fallback path, and memory pressure is a leading "
+                "indicator of backpressure [runbook-0]."
+            )
+        else:
+            text = (
+                "Northstar added a streaming path and improved latency, but operators need to watch "
+                "for lag and backpressure."
+            )
+    else:
+        text = (
+            "STUB_RESPONSE\n\n"
+            f"System prompt: {system_prompt[:120]}...\n"
+            f"User prompt: {user_prompt[:240]}..."
+        )
+
     latency_ms = (time.perf_counter() - started) * 1000.0
     return LLMResult(
         text=text,

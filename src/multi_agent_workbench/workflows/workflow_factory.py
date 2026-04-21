@@ -17,9 +17,9 @@ def init_workflow(
     corpus: LoadedCorpus,
     top_k: int,
     llm: LLMClientABC,
-    workflow_type: WorkflowTypesLiteral = "simple",
+    workflow_type: WorkflowTypesLiteral = "langgraph",
 ) -> WorkflowType:
-    # TODO: change default to 'LangGraph'
+
     if workflow_type == "langgraph":
         return LangGraphWorkflow(
             planner=PlannerAgent(llm=llm),

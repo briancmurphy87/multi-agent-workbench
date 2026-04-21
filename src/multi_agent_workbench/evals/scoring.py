@@ -13,6 +13,7 @@ class EvalScore:
     planner_retrieval_correct: bool
     supervisor_action_correct: bool
     insufficient_evidence_handled_correctly: bool
+    retry_executed_correctly: bool
 
 
 def score_case(
@@ -26,6 +27,7 @@ def score_case(
     expected_planner_mode: str,
     expected_needs_tools: bool,
     supervisor_action: str | None,
+    retry_count: int,
     expected_supervisor_action: str,
 ) -> EvalScore:
     answer = (final_answer or "").lower()
@@ -56,6 +58,10 @@ def score_case(
             )
         )
 
+    retry_executed_correctly = True
+    if expected_supervisor_action == "retry_responder":
+        retry_executed_correctly = retry_count > 0
+
     return EvalScore(
         keyword_hit_rate=keyword_hit_rate,
         retrieval_used_correctly=retrieval_used_correctly,
@@ -65,4 +71,5 @@ def score_case(
         planner_retrieval_correct=planner_retrieval_correct,
         supervisor_action_correct=supervisor_action_correct,
         insufficient_evidence_handled_correctly=insufficient_evidence_handled_correctly,
+        retry_executed_correctly=retry_executed_correctly,
     )

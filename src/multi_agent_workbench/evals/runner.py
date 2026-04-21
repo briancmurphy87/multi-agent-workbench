@@ -79,9 +79,9 @@ def run_evals(
         )
 
         # write artifacts of just-executed 'run'
-        case_output_dir = outputs_dir / case.case_id
-        case_output_dir.mkdir(parents=True, exist_ok=True)
-        write_run_artifacts(final_state, case_output_dir)
+        dir_case_outputs_root = outputs_dir / case.case_id
+        dir_case_outputs_root.mkdir(parents=True, exist_ok=True)
+        write_run_artifacts(final_state, dir_case_outputs_root)
 
         score = score_case(
             final_answer=final_state.final_answer,

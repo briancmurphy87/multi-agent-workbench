@@ -63,14 +63,13 @@ class LangGraphWorkflow:
         )
 
         builder.add_edge("respond_retry", "critic_retry")
-        builder.add_edge("critic_retry", "finalize")
+        builder.add_edge("critic_retry", "supervisor")
         builder.add_edge("finalize", END)
 
         self.graph = builder.compile()
 
     def run(self, state: WorkbenchState) -> WorkbenchState:
-        raw_data = self.graph.invoke(state)
-        return WorkbenchState.model_validate(raw_data)
+        return WorkbenchState.model_validate(self.graph.invoke(state))
 
     """
     Graph nodes that are thin wrappers
@@ -183,9 +182,11 @@ def route_after_plan(state: WorkbenchState) -> str:
     return "respond"
 
 def route_after_supervisor(state: WorkbenchState) -> str:
-    action = state.supervisor_decision.action if state.supervisor_decision else "accept"
-    if action == "retry_responder":
+    action = (
+        state.supervisor_decision.action
+        if state.supervisor_decision
+        else "accept"
+    )
+    if action == "retry_responder" and state.retry_count < 1:
         return "respond_retry"
-    if action == "finalize_insufficient_evidence":
-        return "finalize"
     return "finalize"

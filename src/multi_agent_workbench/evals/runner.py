@@ -95,9 +95,9 @@ def run_evals(
                 "case_id": case.case_id,
                 "query": case.query,
                 "planner_decision": (
-                    asdict(final_state.planner_decision)
-                    if final_state.planner_decision is not None
-                    else None
+                    None
+                    if final_state.planner_decision is None
+                    else final_state.planner_decision.model_dump(mode='json')
                 ),
                 "supervisor_decision": (
                     asdict(final_state.supervisor_decision)

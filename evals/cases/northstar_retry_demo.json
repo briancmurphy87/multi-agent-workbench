@@ -1,0 +1,14 @@
+{
+  "id": "northstar_retry_demo",
+  "query": "Retry-demo: what changed in Northstar's ingestion pipeline and what operational caveats are mentioned in the runbook?",
+  "expected_keywords": [
+    "streaming path",
+    "latency",
+    "lag exceeds 5 minutes",
+    "backpressure"
+  ],
+  "requires_retrieval": true,
+  "expected_planner_mode": "retrieve",
+  "expected_needs_tools": false,
+  "expected_supervisor_action": "retry_responder"
+}

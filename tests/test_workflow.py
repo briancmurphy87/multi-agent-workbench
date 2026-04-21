@@ -73,6 +73,7 @@ def test_simple_workflow_runs_end_to_end(tmp_path: Path) -> None:
         )
     )
 
+    # call: 'run'
     final_state = workflow.run(state)
 
     assert final_state.planner_decision.needs_retrieval
@@ -80,6 +81,7 @@ def test_simple_workflow_runs_end_to_end(tmp_path: Path) -> None:
     assert final_state.final_answer is not None
     assert len(final_state.agent_steps) >= 4
     assert final_state.critic_verdict is not None
+    # verify output: agent = 'supervisor'
     assert final_state.supervisor_decision is not None
     assert final_state.supervisor_decision.action in {
         "accept",

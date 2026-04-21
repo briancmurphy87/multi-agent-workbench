@@ -23,7 +23,7 @@ def test_supervisor_finalizes_insufficient_evidence() -> None:
     decision = supervisor.run(state)
 
     assert decision.action == "finalize_insufficient_evidence"
-
+    assert state.supervisor_decision is not None
 
 def test_supervisor_accepts_good_answer() -> None:
     state = WorkbenchState(user_query="test")
@@ -34,3 +34,4 @@ def test_supervisor_accepts_good_answer() -> None:
     decision = supervisor.run(state)
 
     assert decision.action == "accept"
+    assert state.supervisor_decision is not None

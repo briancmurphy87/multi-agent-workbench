@@ -102,10 +102,26 @@ def run_evals(
         1 for r in results if r["score"]["retrieval_used_correctly"]
     ) / len(results)
 
+    # aggregate planner metrics
+    planner_mode_accuracy = sum(
+        1 for r in results if r["score"]["planner_mode_correct"]
+    ) / len(results)
+
+    planner_tools_accuracy = sum(
+        1 for r in results if r["score"]["planner_tools_correct"]
+    ) / len(results)
+
+    planner_retrieval_accuracy = sum(
+        1 for r in results if r["score"]["planner_retrieval_correct"]
+    ) / len(results)
+
     summary = {
         "num_cases": len(results),
         "avg_keyword_hit_rate": avg_keyword_hit_rate,
         "retrieval_accuracy": retrieval_accuracy,
+        "planner_mode_accuracy": planner_mode_accuracy,
+        "planner_tools_accuracy": planner_tools_accuracy,
+        "planner_retrieval_accuracy": planner_retrieval_accuracy,
         "results": results,
     }
 

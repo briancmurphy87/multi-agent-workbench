@@ -116,7 +116,7 @@ def run_evals(
         1 for r in results if r["score"]["retrieval_used_correctly"]
     ) / len(results)
 
-    # aggregate planner metrics
+    # aggregate metrics for agent = planner
     planner_mode_accuracy = sum(
         1 for r in results if r["score"]["planner_mode_correct"]
     ) / len(results)
@@ -129,6 +129,16 @@ def run_evals(
         1 for r in results if r["score"]["planner_retrieval_correct"]
     ) / len(results)
 
+    # aggregate metrics for agent = supervisor
+    supervisor_action_accuracy = sum(
+        1 for r in results if r["score"]["supervisor_action_correct"]
+    ) / len(results)
+
+    insufficient_evidence_accuracy = sum(
+        1 for r in results if r["score"]["insufficient_evidence_handled_correctly"]
+    ) / len(results)
+
+    # package summary metrics
     summary = {
         "num_cases": len(results),
         "avg_keyword_hit_rate": avg_keyword_hit_rate,
@@ -136,9 +146,11 @@ def run_evals(
         "planner_mode_accuracy": planner_mode_accuracy,
         "planner_tools_accuracy": planner_tools_accuracy,
         "planner_retrieval_accuracy": planner_retrieval_accuracy,
+        "supervisor_action_accuracy": supervisor_action_accuracy,
+        "insufficient_evidence_accuracy": insufficient_evidence_accuracy,
         "results": results,
     }
-
+    # then write
     summary_path = summaries_dir / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     return summary_path

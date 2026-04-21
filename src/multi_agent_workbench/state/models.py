@@ -37,6 +37,13 @@ class AgentStep:
 
 
 @dataclass
+class SupervisorDecision:
+    action: str
+    rationale: str
+    retry_instruction: str | None = None
+
+
+@dataclass
 class WorkbenchState:
     user_query: str
     run_id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -51,3 +58,4 @@ class WorkbenchState:
     critic_verdict: str | None = None
     notes: list[str] = field(default_factory=list)
     artifacts: dict[str, Any] = field(default_factory=dict)
+    supervisor_decision: SupervisorDecision | None = None

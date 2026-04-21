@@ -25,7 +25,7 @@ class SimpleWorkflow:
         self.supervisor = supervisor
 
     def run(self, state: WorkbenchState) -> WorkbenchState:
-        # agent = planner
+        # agent = planner -> proposes a path
         with traced_agent_step(state, self.planner.name, "plan", state.user_query) as step:
             decision = self.planner.run(state)
             # store rationale
@@ -55,12 +55,12 @@ class SimpleWorkflow:
             self.responder.run(state)
             step["output_summary"] = (state.draft_answer or "")[:160]
 
-        # agent = critic
+        # agent = critic -> assesses output quality
         with traced_agent_step(state, self.critic.name, "critique", state.user_query) as step:
             verdict = self.critic.run(state)
             step["output_summary"] = verdict
 
-        # agent = supervisor
+        # agent = supervisor -> decides next action
         with traced_agent_step(state, self.supervisor.name, "supervise", state.user_query) as step:
             supervisor_decision = self.supervisor.run(state)
             step["output_summary"] = (

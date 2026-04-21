@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
 import time
 import uuid
+from dataclasses import dataclass
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -52,8 +52,8 @@ class WorkbenchState(BaseModel):
     created_at: float = Field(default_factory=time.time)
     planner_decision: PlannerDecision | None = None
     retrieved_chunks: list[RetrievedChunk] = Field(default_factory=list)
-    tool_calls: list[ToolCall] = field(default_factory=list)
-    agent_steps: list[AgentStep] = field(default_factory=list)
+    tool_calls: list[ToolCall] = Field(default_factory=list)
+    agent_steps: list[AgentStep] = Field(default_factory=list)
     draft_answer: str | None = None
     final_answer: str | None = None
     critic_verdict: str | None = None

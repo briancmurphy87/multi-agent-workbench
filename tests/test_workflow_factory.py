@@ -1,3 +1,4 @@
+import pytest
 from pathlib import Path
 
 from multi_agent_workbench.llm.client_stub import LLMClientStub
@@ -32,4 +33,5 @@ def test_init_workflow_simple_returns_simple_workflow() -> None:
 
 
 def test_init_workflow_simple_returns_langgraph_workflow() -> None:
+    pytest.importorskip("langgraph")
     _test_case_common(LangGraphWorkflow, "langgraph")

@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import pytest
 from pathlib import Path
 
 from multi_agent_workbench.agents.critic import CriticAgent
@@ -91,6 +91,7 @@ def test_simple_workflow_runs_end_to_end(tmp_path: Path) -> None:
     }
 
 def test_langgraph_workflow_runs_end_to_end(tmp_path: Path) -> None:
+    pytest.importorskip("langgraph")
     corpus_dir = tmp_path / "docs"
     corpus_dir.mkdir(parents=True)
 

@@ -11,6 +11,8 @@ class EvalCase:
     query: str
     expected_keywords: list[str]
     requires_retrieval: bool
+    expected_planner_mode: str
+    expected_needs_tools: bool
 
 
 def load_eval_cases(cases_dir: Path) -> list[EvalCase]:
@@ -23,6 +25,8 @@ def load_eval_cases(cases_dir: Path) -> list[EvalCase]:
                 query=data["query"],
                 expected_keywords=data["expected_keywords"],
                 requires_retrieval=data["requires_retrieval"],
+                expected_planner_mode=data["expected_planner_mode"],
+                expected_needs_tools=data["expected_needs_tools"],
             )
         )
     return cases

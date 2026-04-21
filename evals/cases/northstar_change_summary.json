@@ -8,5 +8,7 @@
     "fallback path",
     "backpressure"
   ],
-  "requires_retrieval": true
+  "requires_retrieval": true,
+  "expected_planner_mode": "retrieve",
+  "expected_needs_tools": false
 }

@@ -8,6 +8,7 @@ from multi_agent_workbench.agents.critic import CriticAgent
 from multi_agent_workbench.agents.planner import PlannerAgent
 from multi_agent_workbench.agents.responder import ResponderAgent
 from multi_agent_workbench.agents.retriever import RetrieverAgent
+from multi_agent_workbench.agents.supervisor import SupervisorAgent
 from multi_agent_workbench.llm.client import LLMClient
 from multi_agent_workbench.observability.artifacts import write_run_artifacts
 from multi_agent_workbench.retrieval.corpus import load_corpus
@@ -42,6 +43,7 @@ def run_evals(
             retriever=RetrieverAgent(corpus=corpus, top_k=top_k),
             responder=ResponderAgent(llm=llm),
             critic=CriticAgent(),
+            supervisor=SupervisorAgent(),
         )
 
         state = WorkbenchState(user_query=case.query)

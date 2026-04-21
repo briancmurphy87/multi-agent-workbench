@@ -6,6 +6,7 @@ from multi_agent_workbench.agents.critic import CriticAgent
 from multi_agent_workbench.agents.planner import PlannerAgent
 from multi_agent_workbench.agents.responder import ResponderAgent
 from multi_agent_workbench.agents.retriever import RetrieverAgent
+from multi_agent_workbench.agents.supervisor import SupervisorAgent
 from multi_agent_workbench.observability.artifacts import write_run_artifacts
 from multi_agent_workbench.retrieval.corpus import load_corpus
 from multi_agent_workbench.state.models import WorkbenchState
@@ -61,6 +62,7 @@ def test_simple_workflow_runs_end_to_end(tmp_path: Path) -> None:
         retriever=RetrieverAgent(corpus=corpus, top_k=5),
         responder=ResponderAgent(llm=llm),
         critic=CriticAgent(),
+        supervisor=SupervisorAgent(),
     )
 
     state = WorkbenchState(
@@ -78,7 +80,12 @@ def test_simple_workflow_runs_end_to_end(tmp_path: Path) -> None:
     assert final_state.final_answer is not None
     assert len(final_state.agent_steps) >= 4
     assert final_state.critic_verdict is not None
-
+    assert final_state.supervisor_decision is not None
+    assert final_state.supervisor_decision.action in {
+        "accept",
+        "retry_responder",
+        "finalize_insufficient_evidence",
+    }
 
 def test_run_artifacts_are_written(tmp_path: Path) -> None:
     state = WorkbenchState(user_query="test query")

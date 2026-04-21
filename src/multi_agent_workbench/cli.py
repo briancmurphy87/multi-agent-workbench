@@ -7,6 +7,7 @@ from multi_agent_workbench.agents.critic import CriticAgent
 from multi_agent_workbench.agents.planner import PlannerAgent
 from multi_agent_workbench.agents.responder import ResponderAgent
 from multi_agent_workbench.agents.retriever import RetrieverAgent
+from multi_agent_workbench.agents.supervisor import SupervisorAgent
 from multi_agent_workbench.config import get_settings
 from multi_agent_workbench.evals.runner import run_evals
 from multi_agent_workbench.llm.client_factory import init_llm_client
@@ -47,6 +48,7 @@ def main() -> None:
             retriever=RetrieverAgent(corpus=corpus, top_k=settings.top_k),
             responder=ResponderAgent(llm=llm),
             critic=CriticAgent(),
+            supervisor=SupervisorAgent(),
         )
         state = WorkbenchState(user_query=args.query)
         final_state = workflow.run(state)

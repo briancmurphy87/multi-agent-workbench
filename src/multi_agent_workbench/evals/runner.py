@@ -147,6 +147,11 @@ def run_evals(
         1 for r in results if r["score"]["insufficient_evidence_handled_correctly"]
     ) / len(results)
 
+    # agent = 'responder': agg retry metric
+    retry_execution_accuracy = sum(
+        1 for r in results if r["score"]["retry_executed_correctly"]
+    ) / len(results)
+
     # package summary metrics
     summary = {
         "num_cases": len(results),
@@ -157,6 +162,7 @@ def run_evals(
         "planner_retrieval_accuracy": planner_retrieval_accuracy,
         "supervisor_action_accuracy": supervisor_action_accuracy,
         "insufficient_evidence_accuracy": insufficient_evidence_accuracy,
+        "retry_execution_accuracy": retry_execution_accuracy,
         "results": results,
     }
     # then write

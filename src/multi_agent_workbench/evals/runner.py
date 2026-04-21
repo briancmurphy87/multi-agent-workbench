@@ -49,7 +49,7 @@ def run_evals(
         state = WorkbenchState(user_query=case.query)
         final_state = workflow.run(state)
 
-        # extract planner fields before scoring
+        # agent = 'planner': extract fields before scoring
         planner_mode = (
             final_state.planner_decision.mode
             if final_state.planner_decision is not None
@@ -65,10 +65,17 @@ def run_evals(
             if final_state.planner_decision is not None
             else None
         )
+        # agent = 'supervisor': extract fields before scoring
         supervisor_action = (
             final_state.supervisor_decision.action
             if final_state.supervisor_decision is not None
             else None
+        )
+        # agent = 'responder': count retries
+        retry_count = sum(
+            1
+            for step in final_state.agent_steps
+            if step.agent_name == "responder" and step.action == "respond_retry"
         )
 
         # write artifacts of just-executed 'run'
@@ -87,6 +94,7 @@ def run_evals(
             expected_planner_mode=case.expected_planner_mode,
             expected_needs_tools=case.expected_needs_tools,
             supervisor_action=supervisor_action,
+            retry_count=retry_count,
             expected_supervisor_action=case.expected_supervisor_action,
         )
 
@@ -106,6 +114,7 @@ def run_evals(
                 ),
                 "critic_verdict": final_state.critic_verdict,
                 "retrieved_count": len(final_state.retrieved_chunks),
+                "retry_count": retry_count,
                 "final_answer": final_state.final_answer,
                 "score": asdict(score),
             }

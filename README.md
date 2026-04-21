@@ -1,6 +1,31 @@
+<!-- TOC -->
+* [multi-agent-workbench](#multi-agent-workbench)
+* [setup](#setup)
+* [Current status (v0)](#current-status-v0)
+    * [First example corpus](#first-example-corpus)
+    * [Example Query](#example-query)
+      * [Running from Command Line](#running-from-command-line)
+        * [You Should See](#you-should-see)
+        * [Realized Output](#realized-output)
+    * [Run artifacts](#run-artifacts)
+  * [v0 milestone plan](#v0-milestone-plan)
+    * [Milestone 1: generalize the bones](#milestone-1-generalize-the-bones)
+    * [Milestone 2: explicit multi-agent loop](#milestone-2-explicit-multi-agent-loop)
+    * [Milestone 3: retrieval + artifacts](#milestone-3-retrieval--artifacts)
+    * [Milestone 4: eval harness](#milestone-4-eval-harness)
+    * [Milestone 5: supervisor / retry logic](#milestone-5-supervisor--retry-logic)
+    * [Milestone 6: LangGraph](#milestone-6-langgraph)
+<!-- TOC -->
+
+
 # multi-agent-workbench
 
-A small, observable multi-agent system for retrieval, reasoning, tool use, and evaluation.
+- A compact multi-agent RAG workbench 
+- for experimenting with planner/retriever/responder/critic/supervisor workflows over a local corpus with: 
+  - explicit traces
+  - artifacts
+  - evals
+
 
 This repository began as a fork of `interview-prep-agent`, then was generalized into a domain-neutral sandbox for experimenting with multi-agent workflows over local document corpora.
 
@@ -11,17 +36,194 @@ run this from project root:
 python -m pip install -e ".[dev]"
 ```
 
-## Current status
+# Example run (multi-agent workflow)
+
+This example shows how the system processes a query end-to-end using:
+
+- planner → decides execution strategy
+- retriever → fetches relevant document chunks
+- responder → drafts an answer
+- critic → evaluates grounding and citations
+- supervisor → decides whether to accept, retry, or finalize
+
+## Step 1: Run a real example
+```shell
+OPENAI_MODEL=stub-model python -m multi_agent_workbench.cli ask \
+  --query "Retry-demo: what changed in Northstar's ingestion pipeline and what operational caveats are mentioned in the runbook?"
+```
+
+Then open:
+```shell
+runs/<run_id>/
+```
+
+And grab:
+- `trace.json`
+- `retrieved_chunks.json`
+- `final_answer.md`
+- `artifacts.json`
+
+## Step 2: Extract the pieces
+
+From artifacts, you want to manually pull:
+
+### Query
+
+```
+Retry-demo: what changed in Northstar's ingestion pipeline and what operational caveats are mentioned in the runbook?
+```
+
+### Planner decision
+From:
+```
+state.artifacts["planner"]
+```
+
+Content:
+```json
+{
+  "mode": "retrieve",
+  "needs_retrieval": true,
+  "needs_tools": false,
+  "answer_strategy": "synthesize_across_docs",
+  "rationale": "The query requires synthesizing changes across architecture and release notes, and extracting operational caveats from the runbook."
+}
+
+```
+### Retrieved evidence (top chunks)
+
+
+Output snippet of form `[{doc_id}]` followed by first ~1-2 lines
+```
+[release_notes-0]
+Northstar v2.4 introduced a streaming ingestion path...
+reduced latency to under 90 seconds...
+
+[runbook-0]
+If stream processor lag exceeds 5 minutes, operators should divert traffic...
+Memory pressure is the leading indicator of backpressure...
+
+[architecture-0]
+Northstar historically used a batch-first ingestion design...
+```
+
+### Critic verdict
+From:
+```
+state.critic_verdict
+```
+Content: 
+```
+retry_with_citations
+```
+Meaning: The first draft answer lacked sufficient grounding.
+
+### Supervisor decision
+From:
+```
+state.artifacts["supervisor"]
+```
+Content:
+```json
+{
+  "action": "retry_responder",
+  "rationale": "Critic requested a revised answer with better citation support."
+}
+```
+
+### Final answer
+From:
+```
+final_answer.md
+```
+Content: 
+```
+Northstar moved from a batch-first ingestion design to adding a streaming path for high-priority traffic, reducing latency to under 90 seconds [release_notes-0].
+
+The runbook notes that if stream processor lag exceeds 5 minutes, operators should divert traffic to the batch fallback path, and memory pressure is a key indicator of backpressure [runbook-0].
+```
+
+## What this demonstrates
+- planner correctly routes the query to retrieval
+- retriever gathers evidence across multiple documents
+- responder synthesizes a grounded answer
+- critic detects missing citations in the first draft
+- supervisor triggers a retry with stricter instructions
+- final answer is improved and properly grounded
+
+
+## Evaluation summary
+
+trimmed version of contents generated at `evals/summaries/summary.json`:
+
+```json
+{
+  "num_cases": 4,
+  "avg_keyword_hit_rate": 0.3958333333333333,
+  "retrieval_accuracy": 0.75,
+  "planner_mode_accuracy": 0.75,
+  "planner_tools_accuracy": 1.0,
+  "planner_retrieval_accuracy": 0.75,
+  "supervisor_action_accuracy": 1.0,
+  "insufficient_evidence_accuracy": 1.0,
+  "retry_execution_accuracy": 1.0,
+  "results": [
+    {
+      "case_id": "northstar_change_summary",
+      "query": "What changed in Northstar's ingestion pipeline between the current architecture and the latest release, and are there any operational caveats mentioned in the runbook?",
+      "planner_decision": {
+        "mode": "retrieve",
+        "needs_retrieval": true,
+        "needs_tools": false,
+        "answer_strategy": "synthesize_across_docs",
+        "rationale": "The query asks for synthesis across multiple documents."
+      },
+...
+    {
+      "case_id": "northstar_runbook_only",
+      "query": "What operational caveats does the Northstar runbook mention for v2.4?",
+      "planner_decision": {
+        "mode": "retrieve",
+        "needs_retrieval": true,
+        "needs_tools": false,
+        "answer_strategy": "synthesize_across_docs",
+        "rationale": "The query asks for synthesis across multiple documents."
+      },
+      "supervisor_decision": {
+        "action": "accept",
+        "rationale": "Critic accepted the answer and a draft is present.",
+        "retry_instruction": null
+      },
+      "critic_verdict": "accept",
+      "retrieved_count": 5,
+      "retry_count": 0,
+      "final_answer": "STUB_RESPONSE\n\nSystem prompt: You are a careful research assistant. Answer only from provided evidence. If evidence is insufficient, say so. Include c...\nUser prompt: Question:\nWhat operational caveats does the Northstar runbook mention for v2.4?\n\nEvidence:\n[runbook-0] # Runbook\n\nOperational caveats for Northstar v2.4:\n\n- If stream processor lag exceeds 5 minutes, operators should divert high-priority tr...",
+      "score": {
+        "keyword_hit_rate": 0.25,
+        "retrieval_used_correctly": true,
+        "produced_answer": true,
+        "planner_mode_correct": true,
+        "planner_tools_correct": true,
+        "planner_retrieval_correct": true,
+        "supervisor_action_correct": true,
+        "insufficient_evidence_handled_correctly": true,
+        "retry_executed_correctly": true
+      }
+    }
+  ]
+}
+```
+
+# Current status (v0)
 
 v0 focuses on one end-to-end workflow over a small local corpus:
-
-    - planner agent
-    - retriever agent
-    - responder agent
-    - critic agent
-    - simple orchestration loop
-    - retrieval traces
-    - per-run artifacts
+- planner agent
+- retriever agent
+- responder agent
+- critic agent
+- simple orchestration loop
+- retrieval traces
+- per-run artifacts
 
 The goal is to make agent runs easy to inspect, debug, and evaluate.
 
@@ -89,51 +291,3 @@ Current outputs include:
 - `retrieved_chunks.json`
 - `artifacts.json`
 
-
-## v0 milestone plan
-
-### Milestone 1: generalize the bones
-- Do this first.
-    - rename package and repo language
-    - migrate `llm.py`
-    - migrate/generalize state
-    - migrate/generalize observability
-    - create new CLI skeleton
-- Deliverable:
-    - repo runs with a generic query and dummy workflow
-
-### Milestone 2: explicit multi-agent loop
-- add planner
-- add retriever
-- add responder
-- add critic
-- wire them in `simple_loop.py`
-- Deliverable:
-    - one end-to-end multi-agent run over a local corpus
-
-### Milestone 3: retrieval + artifacts
-- ingest docs
-- chunk docs
-- search docs
-- emit retrieved chunk artifacts
-- emit trace artifacts
-- Deliverable:
-    - answer with cited chunks and trace output
-
-### Milestone 4: eval harness
-- add eval cases
-- batch runner
-- summary metrics
-- Deliverable:
-    - `evals/summaries/summary_*.json`
-
-### Milestone 5: supervisor / retry logic
-- add a retry path when critic flags poor grounding
-- compare first answer vs revised answer
-- Deliverable:
-    - visible self-reflection / critique loop
-
-### Milestone 6: LangGraph
-- move simple loop into graph orchestration
-- Deliverable:
-    - repo now visibly uses a recognized multi-agent framework

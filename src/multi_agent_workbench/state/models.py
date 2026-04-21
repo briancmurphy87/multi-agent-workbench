@@ -5,6 +5,8 @@ from typing import Any
 import time
 import uuid
 
+from pydantic import BaseModel
+
 from multi_agent_workbench.agents.planner_models import PlannerDecision
 
 
@@ -43,8 +45,7 @@ class SupervisorDecision:
     retry_instruction: str | None = None
 
 
-@dataclass
-class WorkbenchState:
+class WorkbenchState(BaseModel):
     user_query: str
     run_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     conversation_id: str = field(default_factory=lambda: str(uuid.uuid4()))

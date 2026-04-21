@@ -12,7 +12,8 @@ authors = [
   { name = "Brian Murphy" }
 ]
 dependencies = [
-  "openai>=1.0.0"
+  "openai>=1.0.0",
+  "langgraph>=0.2.0"
 ]
 
 [project.optional-dependencies]

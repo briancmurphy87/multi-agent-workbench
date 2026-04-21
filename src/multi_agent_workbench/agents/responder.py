@@ -10,7 +10,7 @@ class ResponderAgent:
     def __init__(self, llm: LLMClient) -> None:
         self.llm = llm
 
-    def run(self, state: WorkbenchState) -> str:
+    def run(self, state: WorkbenchState, revision_instruction: str | None = None) -> str:
         evidence = "\n\n".join(
             f"[{c.chunk_id}] {c.text[:900]}" for c in state.retrieved_chunks
         ) or "No retrieved evidence."
@@ -19,10 +19,12 @@ class ResponderAgent:
             "You are a careful research assistant. Answer only from provided evidence. "
             "If evidence is insufficient, say so. Include citations using chunk ids in square brackets."
         )
+
+        extra_instruction = revision_instruction or "Write a concise answer with citations."
         user_prompt = (
             f"Question:\n{state.user_query}\n\n"
             f"Evidence:\n{evidence}\n\n"
-            "Write a concise answer with citations."
+            f"Instruction:\n{extra_instruction}"
         )
         result = self.llm.complete_text(system_prompt=system_prompt, user_prompt=user_prompt)
         state.draft_answer = result.text

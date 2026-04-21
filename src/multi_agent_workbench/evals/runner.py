@@ -47,6 +47,24 @@ def run_evals(
         state = WorkbenchState(user_query=case.query)
         final_state = workflow.run(state)
 
+        # extract planner fields before scoring
+        planner_mode = (
+            final_state.planner_decision.mode
+            if final_state.planner_decision is not None
+            else None
+        )
+        planner_needs_tools = (
+            final_state.planner_decision.needs_tools
+            if final_state.planner_decision is not None
+            else None
+        )
+        planner_needs_retrieval = (
+            final_state.planner_decision.needs_retrieval
+            if final_state.planner_decision is not None
+            else None
+        )
+
+        # write artifacts of just-executed 'run'
         case_output_dir = outputs_dir / case.case_id
         case_output_dir.mkdir(parents=True, exist_ok=True)
         write_run_artifacts(final_state, case_output_dir)
@@ -56,6 +74,11 @@ def run_evals(
             expected_keywords=case.expected_keywords,
             requires_retrieval=case.requires_retrieval,
             retrieved_count=len(final_state.retrieved_chunks),
+            planner_mode=planner_mode,
+            planner_needs_tools=planner_needs_tools,
+            planner_needs_retrieval=planner_needs_retrieval,
+            expected_planner_mode=case.expected_planner_mode,
+            expected_needs_tools=case.expected_needs_tools,
         )
 
         results.append(

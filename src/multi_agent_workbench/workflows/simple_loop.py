@@ -105,6 +105,7 @@ def _handle_supervisor_action(
                 revision_instruction=supervisor_decision.retry_instruction,
             )
             step["output_summary"] = "retried_with_supervisor_instruction"
+            state.retry_count += 1
 
         with traced_agent_step(state, critic.name, "critique_retry", state.user_query) as step:
             verdict = critic.run(state)

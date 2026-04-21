@@ -59,3 +59,4 @@ class WorkbenchState:
     notes: list[str] = field(default_factory=list)
     artifacts: dict[str, Any] = field(default_factory=dict)
     supervisor_decision: SupervisorDecision | None = None
+    retry_count: int = 0

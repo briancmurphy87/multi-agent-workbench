@@ -5,6 +5,8 @@ from typing import Any
 import time
 import uuid
 
+from multi_agent_workbench.agents.planner_models import PlannerDecision
+
 
 @dataclass
 class RetrievedChunk:
@@ -40,7 +42,7 @@ class WorkbenchState:
     run_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     conversation_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     created_at: float = field(default_factory=time.time)
-    planner_decision: str | None = None
+    planner_decision: PlannerDecision | None = None
     retrieved_chunks: list[RetrievedChunk] = field(default_factory=list)
     tool_calls: list[ToolCall] = field(default_factory=list)
     agent_steps: list[AgentStep] = field(default_factory=list)

@@ -57,7 +57,7 @@ def test_simple_workflow_runs_end_to_end(tmp_path: Path) -> None:
     corpus = load_corpus(corpus_dir)
     llm = LLMClientStub()
     workflow = SimpleWorkflow(
-        planner=PlannerAgent(),
+        planner=PlannerAgent(llm=llm),
         retriever=RetrieverAgent(corpus=corpus, top_k=5),
         responder=ResponderAgent(llm=llm),
         critic=CriticAgent(),
@@ -73,7 +73,7 @@ def test_simple_workflow_runs_end_to_end(tmp_path: Path) -> None:
 
     final_state = workflow.run(state)
 
-    assert final_state.planner_decision == "retrieve"
+    assert final_state.planner_decision.needs_retrieval
     assert len(final_state.retrieved_chunks) > 0
     assert final_state.final_answer is not None
     assert len(final_state.agent_steps) >= 4

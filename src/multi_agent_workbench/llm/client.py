@@ -3,6 +3,7 @@
 # ----------------------------
 from __future__ import annotations
 
+import json
 from typing import Any
 import time
 
@@ -18,7 +19,6 @@ class LLMClient:
             client_state: ClientState,
     ) -> None:
         self.model = model
-        # assert client_state.open_api_client is not None, "did not initialize OpenAI client"
         self._client_state = client_state
 
     def complete_text(self, system_prompt: str, user_prompt: str) -> LLMResult:
@@ -30,6 +30,25 @@ class LLMClient:
             user_prompt=user_prompt,
         )
 
+    def complete_json(self, system_prompt: str, user_prompt: str) -> dict[str, Any]:
+        result = self.complete_text(
+            system_prompt=system_prompt,
+            user_prompt=(
+                    user_prompt
+                    + "\n\nReturn valid JSON only. Do not include markdown fences."
+            ),
+        )
+
+        try:
+            return json.loads(result.text)
+        except json.JSONDecodeError:
+            return {
+                "mode": "retrieve",
+                "needs_retrieval": True,
+                "needs_tools": False,
+                "answer_strategy": "fallback_retrieval",
+                "rationale": "JSON parsing failed; defaulting to retrieval-first plan.",
+            }
 
 def _complete_text_openai(
     model: str,

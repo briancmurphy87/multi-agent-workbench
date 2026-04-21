@@ -38,7 +38,7 @@ def run_evals(
 
     for case in cases:
         workflow = SimpleWorkflow(
-            planner=PlannerAgent(),
+            planner=PlannerAgent(llm=llm),
             retriever=RetrieverAgent(corpus=corpus, top_k=top_k),
             responder=ResponderAgent(llm=llm),
             critic=CriticAgent(),
@@ -62,7 +62,11 @@ def run_evals(
             {
                 "case_id": case.case_id,
                 "query": case.query,
-                "planner_decision": final_state.planner_decision,
+                "planner_decision": (
+                    asdict(final_state.planner_decision)
+                    if final_state.planner_decision is not None
+                    else None
+                ),
                 "critic_verdict": final_state.critic_verdict,
                 "retrieved_count": len(final_state.retrieved_chunks),
                 "final_answer": final_state.final_answer,

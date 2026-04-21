@@ -18,6 +18,29 @@ class LLMClientStub(LLMClient):
             user_prompt=user_prompt,
         )
 
+    """
+    stub must return deterministic JSON for planner calls
+    """
+    def complete_json(self, system_prompt: str, user_prompt: str) -> dict[str, Any]:
+        if self.model == "stub-model" or self._client is None:
+            lowered = user_prompt.lower()
+            if any(term in lowered for term in ["what changed", "runbook", "release", "architecture"]):
+                return {
+                    "mode": "retrieve",
+                    "needs_retrieval": True,
+                    "needs_tools": False,
+                    "answer_strategy": "synthesize_across_docs",
+                    "rationale": "The query asks for synthesis across multiple documents.",
+                }
+            return {
+                "mode": "answer_direct",
+                "needs_retrieval": False,
+                "needs_tools": False,
+                "answer_strategy": "direct_response",
+                "rationale": "The query appears answerable without retrieval.",
+            }
+
+
 def _complete_text_stub(model: str, system_prompt: str, user_prompt: str) -> LLMResult:
     started = time.perf_counter()
     text = (

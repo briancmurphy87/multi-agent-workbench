@@ -43,7 +43,7 @@ def main() -> None:
         corpus = load_corpus(corpus_dir)
         llm = init_llm_client(model=settings.model)
         workflow = SimpleWorkflow(
-            planner=PlannerAgent(),
+            planner=PlannerAgent(llm=llm),
             retriever=RetrieverAgent(corpus=corpus, top_k=settings.top_k),
             responder=ResponderAgent(llm=llm),
             critic=CriticAgent(),

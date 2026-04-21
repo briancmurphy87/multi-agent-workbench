@@ -24,9 +24,23 @@ class SimpleWorkflow:
     def run(self, state: WorkbenchState) -> WorkbenchState:
         with traced_agent_step(state, self.planner.name, "plan", state.user_query) as step:
             decision = self.planner.run(state)
-            step["output_summary"] = decision
+            # store rationale
+            step["output_summary"] = (
+                f"mode={decision.mode}; "
+                f"needs_retrieval={decision.needs_retrieval}; "
+                f"needs_tools={decision.needs_tools}; "
+                f"strategy={decision.answer_strategy}"
+            )
+            # store planner artifacts
+            state.artifacts["planner"] = {
+                "mode": decision.mode,
+                "needs_retrieval": decision.needs_retrieval,
+                "needs_tools": decision.needs_tools,
+                "answer_strategy": decision.answer_strategy,
+                "rationale": decision.rationale,
+            }
 
-        if decision == "retrieve":
+        if decision.needs_retrieval:
             with traced_agent_step(state, self.retriever.name, "retrieve", state.user_query) as step:
                 self.retriever.run(state)
                 step["output_summary"] = f"retrieved={len(state.retrieved_chunks)}"

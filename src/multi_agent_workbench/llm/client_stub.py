@@ -3,12 +3,12 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from multi_agent_workbench.llm.client import LLMClient
+from multi_agent_workbench.llm.client_base import LLMClientABC
 from multi_agent_workbench.llm.client_state import ClientState
 from multi_agent_workbench.llm.result import LLMResult
 
 
-class LLMClientStub(LLMClient):
+class LLMClientStub(LLMClientABC):
     def __init__(self, api_key: str | None = None) -> None:
         super().__init__(model="stub-model", client_state=ClientState(open_api_client=None))
 

@@ -1,25 +1,21 @@
-# ----------------------------
-# LLM interface
-# ----------------------------
 from __future__ import annotations
 
 import json
-from typing import Any
 import time
+from typing import Any
 
-from multi_agent_workbench.llm.client_state import ClientState
-from multi_agent_workbench.llm.result import LLMResult
 from openai import OpenAI
 
+from multi_agent_workbench.llm.client_base import LLMClientABC
+from multi_agent_workbench.llm.client_state import ClientState
+from multi_agent_workbench.llm.result import LLMResult
 
-class LLMClient:
-    def __init__(
-            self,
-            model: str,
-            client_state: ClientState,
-    ) -> None:
-        self.model = model
-        self._client_state = client_state
+
+class LLMClientOpenAI(LLMClientABC):
+    def __init__(self, model: str, client_state: ClientState) -> None:
+        assert model != "stub-model", f"invalid model: {model}"
+        assert client_state.open_api_client is not None, "did not initialize OpenAI client"
+        super().__init__(model, client_state)
 
     def complete_text(self, system_prompt: str, user_prompt: str) -> LLMResult:
         assert self._client_state.open_api_client is not None, "did not initialize OpenAI client"
@@ -49,6 +45,7 @@ class LLMClient:
                 "answer_strategy": "fallback_retrieval",
                 "rationale": "JSON parsing failed; defaulting to retrieval-first plan.",
             }
+
 
 def _complete_text_openai(
     model: str,
@@ -96,6 +93,7 @@ def _complete_text_openai(
         estimated_cost_usd=estimated_cost_usd,
         raw=raw,
     )
+
 
 def _estimate_cost_usd(
         model: str,

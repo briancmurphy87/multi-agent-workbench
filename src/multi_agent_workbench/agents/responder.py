@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from multi_agent_workbench.llm.client import LLMClient
+from multi_agent_workbench.llm.client_base import LLMClientABC
 from multi_agent_workbench.state.models import WorkbenchState
 
 
 class ResponderAgent:
     name = "responder"
 
-    def __init__(self, llm: LLMClient) -> None:
+    def __init__(self, llm: LLMClientABC) -> None:
         self.llm = llm
 
     def run(self, state: WorkbenchState, revision_instruction: str | None = None) -> str:

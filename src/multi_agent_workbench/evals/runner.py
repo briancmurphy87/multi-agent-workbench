@@ -9,7 +9,7 @@ from multi_agent_workbench.agents.planner import PlannerAgent
 from multi_agent_workbench.agents.responder import ResponderAgent
 from multi_agent_workbench.agents.retriever import RetrieverAgent
 from multi_agent_workbench.agents.supervisor import SupervisorAgent
-from multi_agent_workbench.llm.client import LLMClient
+from multi_agent_workbench.llm.client_base import LLMClientABC
 from multi_agent_workbench.observability.artifacts import write_run_artifacts
 from multi_agent_workbench.retrieval.corpus import load_corpus
 from multi_agent_workbench.state.models import WorkbenchState
@@ -30,7 +30,7 @@ def run_evals(
 ) -> Path:
     cases = load_eval_cases(cases_dir)
     corpus = load_corpus(corpus_dir)
-    llm = init_llm_client(model=model)
+    llm: LLMClientABC = init_llm_client(model=model)
 
     outputs_dir.mkdir(parents=True, exist_ok=True)
     summaries_dir.mkdir(parents=True, exist_ok=True)

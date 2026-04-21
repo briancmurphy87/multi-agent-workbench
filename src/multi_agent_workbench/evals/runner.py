@@ -65,6 +65,11 @@ def run_evals(
             if final_state.planner_decision is not None
             else None
         )
+        supervisor_action = (
+            final_state.supervisor_decision.action
+            if final_state.supervisor_decision is not None
+            else None
+        )
 
         # write artifacts of just-executed 'run'
         case_output_dir = outputs_dir / case.case_id
@@ -81,6 +86,8 @@ def run_evals(
             planner_needs_retrieval=planner_needs_retrieval,
             expected_planner_mode=case.expected_planner_mode,
             expected_needs_tools=case.expected_needs_tools,
+            supervisor_action=supervisor_action,
+            expected_supervisor_action=case.expected_supervisor_action,
         )
 
         results.append(
@@ -90,6 +97,11 @@ def run_evals(
                 "planner_decision": (
                     asdict(final_state.planner_decision)
                     if final_state.planner_decision is not None
+                    else None
+                ),
+                "supervisor_decision": (
+                    asdict(final_state.supervisor_decision)
+                    if final_state.supervisor_decision is not None
                     else None
                 ),
                 "critic_verdict": final_state.critic_verdict,

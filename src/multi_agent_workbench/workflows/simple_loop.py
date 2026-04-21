@@ -81,8 +81,9 @@ class SimpleWorkflow:
                 "retry_instruction": supervisor_decision.retry_instruction,
             }
 
-        # finalize
-        state.final_answer = state.draft_answer
+        # finalize draft
+        if state.final_answer is None:
+            state.final_answer = state.draft_answer
         return state
 
 

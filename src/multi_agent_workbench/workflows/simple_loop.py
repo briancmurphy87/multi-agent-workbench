@@ -74,6 +74,12 @@ class SimpleWorkflow:
                 responder=self.responder,
                 critic=self.critic,
             )
+            # store supervisor artifacts
+            state.artifacts["supervisor"] = {
+                "action": supervisor_decision.action,
+                "rationale": supervisor_decision.rationale,
+                "retry_instruction": supervisor_decision.retry_instruction,
+            }
 
         # agent = responder (optional)
         if verdict == "retry_with_citations":

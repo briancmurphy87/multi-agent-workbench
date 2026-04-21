@@ -27,11 +27,11 @@ def _test_case_common(
     realized_workflow = init_workflow(corpus=corpus, top_k=5, llm=LLMClientStub(), workflow_type=workflow_type_literal)
     assert isinstance(realized_workflow, workflow_type), f"|expected={workflow_type} |realized={type(realized_workflow)}"
 
-def test_init_workflow_simple_returns_simple_workflow() -> None:
+def test_init_workflow_simple() -> None:
     _test_case_common(SimpleWorkflow, "simple")
 
 
 
-def test_init_workflow_simple_returns_langgraph_workflow() -> None:
+def test_init_workflow_langgraph() -> None:
     pytest.importorskip("langgraph")
     _test_case_common(LangGraphWorkflow, "langgraph")

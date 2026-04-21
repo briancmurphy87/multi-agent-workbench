@@ -11,14 +11,30 @@ from multi_agent_workbench.observability.traces import traced_agent_step
 from multi_agent_workbench.state.models import WorkbenchState
 
 
+def route_after_plan(state: WorkbenchState) -> str:
+    if state.planner_decision is not None and state.planner_decision.needs_retrieval:
+        return "retrieve"
+    return "respond"
+
+
+def route_after_supervisor(state: WorkbenchState) -> str:
+    if (
+        state.supervisor_decision is not None
+        and state.supervisor_decision.action == "retry_responder"
+        and state.retry_count < 1
+    ):
+        return "respond_retry"
+    return "finalize"
+
+
 class LangGraphWorkflow:
     def __init__(
-            self,
-            planner: PlannerAgent,
-            retriever: RetrieverAgent,
-            responder: ResponderAgent,
-            critic: CriticAgent,
-            supervisor: SupervisorAgent,
+        self,
+        planner: PlannerAgent,
+        retriever: RetrieverAgent,
+        responder: ResponderAgent,
+        critic: CriticAgent,
+        supervisor: SupervisorAgent,
     ) -> None:
         self.planner = planner
         self.retriever = retriever
@@ -69,12 +85,10 @@ class LangGraphWorkflow:
         self.graph = builder.compile()
 
     def run(self, state: WorkbenchState) -> WorkbenchState:
-        return WorkbenchState.model_validate(self.graph.invoke(state))
-
-    """
-    Graph nodes that are thin wrappers
-    Each node should just call the existing agent and return updated state
-    """
+        result = self.graph.invoke(state)
+        if isinstance(result, WorkbenchState):
+            return result
+        return WorkbenchState.model_validate(result)
 
     def plan_node(self, state: WorkbenchState) -> WorkbenchState:
         with traced_agent_step(
@@ -105,7 +119,7 @@ class LangGraphWorkflow:
         ) as step:
             self.retriever.run(state)
             step["output_summary"] = f"retrieved={len(state.retrieved_chunks)}"
-            return state
+        return state
 
     def respond_node(self, state: WorkbenchState) -> WorkbenchState:
         with traced_agent_step(
@@ -116,7 +130,7 @@ class LangGraphWorkflow:
         ) as step:
             self.responder.run(state)
             step["output_summary"] = (state.draft_answer or "")[:160]
-            return state
+        return state
 
     def critique_node(self, state: WorkbenchState) -> WorkbenchState:
         with traced_agent_step(
@@ -124,13 +138,14 @@ class LangGraphWorkflow:
         ) as step:
             verdict = self.critic.run(state)
             step["output_summary"] = verdict
-            return state
+        return state
 
     def supervise_node(self, state: WorkbenchState) -> WorkbenchState:
         with traced_agent_step(
                 state, self.supervisor.name, "supervise", state.user_query
         ) as step:
             decision = self.supervisor.run(state)
+            state.supervisor_decision = decision
             step["output_summary"] = (
                 f"action={decision.action}; "
                 f"rationale={decision.rationale[:120]}"
@@ -142,9 +157,7 @@ class LangGraphWorkflow:
                 "rationale": decision.rationale,
                 "retry_instruction": decision.retry_instruction,
             }
-
-            state.supervisor_decision = decision
-            return state
+        return state
 
     def respond_retry_node(self, state: WorkbenchState) -> WorkbenchState:
         instruction = (
@@ -165,28 +178,14 @@ class LangGraphWorkflow:
         return state
 
     def finalize_node(self, state: WorkbenchState) -> WorkbenchState:
-        if state.supervisor_decision and state.supervisor_decision.action == "finalize_insufficient_evidence":
+        if (
+            state.supervisor_decision is not None
+            and state.supervisor_decision.action == "finalize_insufficient_evidence"
+        ):
             state.final_answer = (
-                    state.draft_answer
-                    or "I do not have enough evidence in the retrieved documents to answer confidently."
+                state.draft_answer
+                or "I do not have enough evidence in the retrieved documents to answer confidently."
             )
         else:
             state.final_answer = state.draft_answer
         return state
-"""
-Routing functions
-"""
-def route_after_plan(state: WorkbenchState) -> str:
-    if state.planner_decision and state.planner_decision.needs_retrieval:
-        return "retrieve"
-    return "respond"
-
-def route_after_supervisor(state: WorkbenchState) -> str:
-    action = (
-        state.supervisor_decision.action
-        if state.supervisor_decision
-        else "accept"
-    )
-    if action == "retry_responder" and state.retry_count < 1:
-        return "respond_retry"
-    return "finalize"

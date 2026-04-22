@@ -1,0 +1,14 @@
+{
+  "id": "sqlite_insufficient_evidence",
+  "query": "Which engineer originally approved WAL mode for release in SQLite?",
+  "expected_keywords": [
+    "not enough evidence",
+    "insufficient",
+    "not provided",
+    "cannot answer confidently"
+  ],
+  "requires_retrieval": true,
+  "expected_planner_mode": "retrieve",
+  "expected_needs_tools": false,
+  "expected_supervisor_action": "finalize_insufficient_evidence"
+}

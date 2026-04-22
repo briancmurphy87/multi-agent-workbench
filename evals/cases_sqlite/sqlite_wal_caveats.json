@@ -1,0 +1,15 @@
+{
+  "id": "sqlite_wal_caveats",
+  "query": "What caveats does SQLite document for WAL mode?",
+  "expected_keywords": [
+    "same host",
+    "network filesystem",
+    "page_size",
+    "read-only",
+    "shm"
+  ],
+  "requires_retrieval": true,
+  "expected_planner_mode": "retrieve",
+  "expected_needs_tools": false,
+  "expected_supervisor_action": "accept"
+}

@@ -1,0 +1,15 @@
+{
+  "id": "sqlite_concurrency",
+  "query": "How does SQLite describe concurrency behavior across WAL mode and locking?",
+  "expected_keywords": [
+    "readers",
+    "writers",
+    "concurrency",
+    "locking",
+    "simultaneous"
+  ],
+  "requires_retrieval": true,
+  "expected_planner_mode": "retrieve",
+  "expected_needs_tools": false,
+  "expected_supervisor_action": "accept"
+}

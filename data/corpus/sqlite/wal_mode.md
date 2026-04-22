@@ -1,7 +1,7 @@
 # Write-Ahead Logging
 
-1\. Overview
-============
+## Overview
+
 
 The default method by which SQLite implements [atomic commit and rollback](atomiccommit.html) is a [rollback journal](lockingv3.html#rollback). Beginning with [version 3.7.0](releaselog/3_7_0.html) (2010-07-21), a new "Write-Ahead Log" option (hereafter referred to as "WAL") is available.
 
@@ -23,15 +23,15 @@ But there are also disadvantages:
 7.  There is the extra operation of [checkpointing](wal.html#ckpt) which, though automatic by default, is still something that application developers need to be mindful of.
 8.  WAL works best with smaller transactions. WAL does not work well for very large transactions. For transactions larger than about 100 megabytes, traditional rollback journal modes will likely be faster. For transactions in excess of a gigabyte, WAL mode may fail with an I/O or disk-full error. It is recommended that one of the rollback journal modes be used for transactions larger than a few dozen megabytes. Beginning with [version 3.11.0](releaselog/3_11_0.html) (2016-02-15), WAL mode works as efficiently with large transactions as does rollback mode.
 
-2\. How WAL Works
-=================
+## How WAL Works
+
 
 The traditional rollback journal works by writing a copy of the original unchanged database content into a separate rollback journal file and then writing changes directly into the database file. In the event of a crash or [ROLLBACK](lang_transaction.html), the original content contained in the rollback journal is played back into the database file to revert the database file to its original state. The [COMMIT](lang_transaction.html) occurs when the rollback journal is deleted.
 
 The WAL approach inverts this. The original content is preserved in the database file and the changes are appended into a separate WAL file. A [COMMIT](lang_transaction.html) occurs when a special record indicating a commit is appended to the WAL. Thus a COMMIT can happen without ever writing to the original database, which allows readers to continue operating from the original unaltered database while changes are simultaneously being committed into the WAL. Multiple transactions can be appended to the end of a single WAL file.
 
-2.1. Checkpointing
-------------------
+### Checkpointing
+
 
 Of course, one wants to eventually transfer all the transactions that are appended in the WAL file back into the original database. Moving the WAL file transactions back into the database is called a "_checkpoint_".
 
@@ -39,8 +39,8 @@ Another way to think about the difference between rollback and write-ahead log i
 
 By default, SQLite does a checkpoint automatically when the WAL file reaches a threshold size of 1000 pages. (The [SQLITE\_DEFAULT\_WAL\_AUTOCHECKPOINT](compile.html#default_wal_autocheckpoint) compile-time option can be used to specify a different default.) Applications using WAL do not have to do anything in order for these checkpoints to occur. But if they want to, applications can adjust the automatic checkpoint threshold. Or they can turn off the automatic checkpoints and run checkpoints during idle moments or in a separate thread or process.
 
-2.2. Concurrency
-----------------
+### Concurrency
+
 
 When a read operation begins on a WAL-mode database, it first remembers the location of the last valid commit record in the WAL. Call this point the "end mark". Because the WAL can be growing and adding new commit records while various readers connect to the database, each reader can potentially have its own end mark. But for any particular reader, the end mark is unchanged for the duration of the transaction, thus ensuring that a single read transaction only sees the database content as it existed at a single point in time.
 
@@ -54,8 +54,8 @@ Thus a long-running read transaction can prevent a checkpointer from making prog
 
 Whenever a write operation occurs, the writer checks how much progress the checkpointer has made, and if the entire WAL has been transferred into the database and synced and if no readers are making use of the WAL, then the writer will rewind the WAL back to the beginning and start putting new transactions at the beginning of the WAL. This mechanism prevents a WAL file from growing without bound.
 
-2.3. Performance Considerations
--------------------------------
+### Performance Considerations
+
 
 Write transactions are very fast since they only involve writing the content once (versus twice for rollback-journal transactions) and because the writes are all sequential. Further, syncing the content to the disk is not required, as long as the application is willing to sacrifice durability following a power loss or hard reboot. (Writers sync the WAL on every transaction commit if [PRAGMA synchronous](pragma.html#pragma_synchronous) is set to FULL but omit this sync if [PRAGMA synchronous](pragma.html#pragma_synchronous) is set to NORMAL.)
 
@@ -69,8 +69,8 @@ Note that with [PRAGMA synchronous](pragma.html#pragma_synchronous) set to NORMA
 
 Notice too that there is a tradeoff between average read performance and average write performance. To maximize the read performance, one wants to keep the WAL as small as possible and hence run checkpoints frequently, perhaps as often as every COMMIT. To maximize write performance, one wants to amortize the cost of each checkpoint over as many writes as possible, meaning that one wants to run checkpoints infrequently and let the WAL grow as large as possible before each checkpoint. The decision of how often to run checkpoints may therefore vary from one application to another depending on the relative read and write performance requirements of the application. The default strategy is to run a checkpoint once the WAL reaches 1000 pages and this strategy seems to work well in test applications on workstations, but other strategies might work better on different platforms or for different workloads.
 
-3\. Activating And Configuring WAL Mode
-=======================================
+## Activating And Configuring WAL Mode
+
 
 An SQLite database connection defaults to [journal\_mode=DELETE](pragma.html#pragma_journal_mode). To convert to WAL mode, use the following pragma:
 
@@ -78,18 +78,18 @@ An SQLite database connection defaults to [journal\_mode=DELETE](pragma.html#pra
 
 The journal\_mode pragma returns a string which is the new journal mode. On success, the pragma will return the string "wal". If the conversion to WAL could not be completed (for example, if the [VFS](vfs.html) does not support the necessary shared-memory primitives) then the journaling mode will be unchanged and the string returned from the primitive will be the prior journaling mode (for example "delete").
 
-3.1. Automatic Checkpoint
--------------------------
+### Automatic Checkpoint
+
 
 By default, SQLite will automatically checkpoint whenever a [COMMIT](lang_transaction.html) occurs that causes the WAL file to be 1000 pages or more in size, or when the last database connection on a database file closes. The default configuration is intended to work well for most applications. But programs that want more control can force a checkpoint using the [wal\_checkpoint pragma](pragma.html#pragma_wal_checkpoint) or by calling the [sqlite3\_wal\_checkpoint()](c3ref/wal_checkpoint.html) C interface. The automatic checkpoint threshold can be changed or automatic checkpointing can be completely disabled using the [wal\_autocheckpoint pragma](pragma.html#pragma_wal_autocheckpoint) or by calling the [sqlite3\_wal\_autocheckpoint()](c3ref/wal_autocheckpoint.html) C interface. A program can also use [sqlite3\_wal\_hook()](c3ref/wal_hook.html) to register a callback to be invoked whenever any transaction commits to the WAL. This callback can then invoke [sqlite3\_wal\_checkpoint()](c3ref/wal_checkpoint.html) or [sqlite3\_wal\_checkpoint\_v2()](c3ref/wal_checkpoint_v2.html) based on whatever criteria it thinks is appropriate. (The automatic checkpoint mechanism is implemented as a simple wrapper around [sqlite3\_wal\_hook()](c3ref/wal_hook.html).)
 
-3.2. Application-Initiated Checkpoints
---------------------------------------
+### Application-Initiated Checkpoints
+
 
 An application can initiate a checkpoint using any writable database connection on the database simply by invoking [sqlite3\_wal\_checkpoint()](c3ref/wal_checkpoint.html) or [sqlite3\_wal\_checkpoint\_v2()](c3ref/wal_checkpoint_v2.html). There are three subtypes of checkpoints that vary in their aggressiveness: PASSIVE, FULL, and RESTART. The default checkpoint style is PASSIVE, which does as much work as it can without interfering with other database connections, and which might not run to completion if there are concurrent readers or writers. All checkpoints initiated by [sqlite3\_wal\_checkpoint()](c3ref/wal_checkpoint.html) and by the automatic checkpoint mechanism are PASSIVE. FULL and RESTART checkpoints try harder to run the checkpoint to completion and can only be initiated by a call to [sqlite3\_wal\_checkpoint\_v2()](c3ref/wal_checkpoint_v2.html). See the [sqlite3\_wal\_checkpoint\_v2()](c3ref/wal_checkpoint_v2.html) documentation for additional information on FULL and RESET checkpoints.
 
-3.3. Persistence of WAL mode
-----------------------------
+### Persistence of WAL mode
+
 
 Unlike the other journaling modes, [PRAGMA journal\_mode=WAL](pragma.html#pragma_journal_mode) is persistent. If a process sets WAL mode, then closes and reopens the database, the database will come back in WAL mode. In contrast, if a process sets (for example) PRAGMA journal\_mode=TRUNCATE and then closes and reopens the database will come back up in the default rollback mode of DELETE rather than the previous TRUNCATE setting.
 
@@ -97,8 +97,8 @@ The persistence of WAL mode means that applications can be converted to using SQ
 
 The WAL journal mode will be set on all connections to the same database file if it is set on any one connection.
 
-4\. The WAL File
-================
+## The WAL File
+
 
 While a [database connection](c3ref/sqlite3.html) is open on a WAL-mode database, SQLite maintains an extra journal file called a "Write Ahead Log" or "WAL File". The name of this file on disk is usually the name of the database file with an extra "\-wal" suffix, though different naming rules may apply if SQLite is compiled with [SQLITE\_ENABLE\_8\_3\_NAMES](compile.html#enable_8_3_names).
 
@@ -106,8 +106,8 @@ The WAL file exists for as long as any [database connection](c3ref/sqlite3.html)
 
 The [WAL file format](fileformat2.html#walformat) is precisely defined and is cross-platform.
 
-5\. Read-Only Databases
-=======================
+## Read-Only Databases
+
 
 Older versions of SQLite could not read a WAL-mode database that was read-only. In other words, write access was required in order to read a WAL-mode database. This constraint was relaxed beginning with SQLite [version 3.22.0](releaselog/3_22_0.html) (2018-01-22).
 
@@ -119,8 +119,8 @@ On newer versions of SQLite, a WAL-mode database on read-only media, or a WAL-mo
 
 Even though it is possible to open a read-only WAL-mode database, it is good practice to convert the database to [PRAGMA journal\_mode=DELETE](pragma.html#pragma_journal_mode) prior to burning an SQLite database image onto read-only media.
 
-6\. Avoiding Excessively Large WAL Files
-========================================
+## Avoiding Excessively Large WAL Files
+
 
 In normal cases, new content is appended to the WAL file until the WAL file accumulates about 1000 pages (and is thus about 4MB in size) at which point a checkpoint is automatically run and the WAL file is recycled. The checkpoint does not normally truncate the WAL file (unless the [journal\_size\_limit pragma](pragma.html#pragma_journal_size_limit) is set). Instead, it merely causes SQLite to start overwriting the WAL file from the beginning. This is done because it is normally faster to overwrite an existing file than to append. When the last connection to a database closes, that connection does one last checkpoint and then deletes the WAL and its associated shared-memory file, to clean up the disk.
 
@@ -139,8 +139,8 @@ So in the vast majority of cases, applications need not worry about the WAL file
     As of SQLite [version 3.11.0](releaselog/3_11_0.html) (2016-02-15), the WAL file for a single transaction should be proportional in size to the transaction itself. Pages that are changed by the transaction should only be written into the WAL file once. However, with older versions of SQLite, the same page might be written into the WAL file multiple times if the transaction grows larger than the page cache.
     
 
-7\. Implementation Of Shared-Memory For The WAL-Index
-=====================================================
+## Implementation Of Shared-Memory For The WAL-Index
+
 
 The [wal-index](walformat.html#shm) is implemented using an ordinary file that is mmapped for robustness. Early (pre-release) implementations of WAL mode stored the wal-index in volatile shared-memory, such as files created in /dev/shm on Linux or /tmp on other unix systems. The problem with that approach is that processes with a different root directory (changed via [chroot](https://en.wikipedia.org/wiki/Chroot)) will see different files and hence use different shared memory areas, leading to database corruption. Other methods for creating nameless shared memory blocks are not portable across the various flavors of unix. And we could not find any method to create nameless shared memory blocks on windows. The only way we have found to guarantee that all processes accessing the same database file use the same shared memory is to create the shared memory by mmapping a file in the same directory as the database itself.
 
@@ -148,8 +148,8 @@ Using an ordinary disk file to provide shared memory has the disadvantage that i
 
 Specialized applications for which the default implementation of shared memory is unacceptable can devise alternative methods via a custom [VFS](vfs.html). For example, if it is known that a particular database will only be accessed by threads within a single process, the wal-index can be implemented using heap memory instead of true shared memory.
 
-8\. Use of WAL Without Shared-Memory
-====================================
+## Use of WAL Without Shared-Memory
+
 
 Beginning in SQLite [version 3.7.4](releaselog/3_7_4.html) (2010-12-07), WAL databases can be created, read, and written even if shared memory is unavailable as long as the [locking\_mode](pragma.html#pragma_locking_mode) is set to EXCLUSIVE before the first attempted access. In other words, a process can interact with a WAL database without using shared memory if that process is guaranteed to be the only process accessing the database. This feature allows WAL databases to be created, read, and written by legacy [VFSes](vfs.html) that lack the "version 2" shared-memory methods xShmMap, xShmLock, xShmBarrier, and xShmUnmap on the [sqlite3\_io\_methods](c3ref/io_methods.html) object.
 
@@ -157,8 +157,8 @@ If [EXCLUSIVE locking mode](pragma.html#pragma_locking_mode) is set prior to the
 
 If NORMAL locking mode is in effect for the first WAL-mode database access, then the shared-memory wal-index is created. This means that the underlying VFS must support the "version 2" shared-memory. If the VFS does not support shared-memory methods, then the attempt to open a database that is already in WAL mode, or the attempt to convert a database into WAL mode, will fail. As long as exactly one connection is using a shared-memory wal-index, the locking mode can be changed freely between NORMAL and EXCLUSIVE. It is only when the shared-memory wal-index is omitted, when the locking mode is EXCLUSIVE prior to the first WAL-mode database access, that the locking mode is stuck in EXCLUSIVE.
 
-9\. Sometimes Queries Return SQLITE\_BUSY In WAL Mode
-=====================================================
+## Sometimes Queries Return SQLITE\_BUSY In WAL Mode
+
 
 The [second advantage of WAL-mode](wal.html#advantages) is that writers do not block readers and readers do not block writers. This is mostly true. But there are some obscure cases where a query against a WAL-mode database can return [SQLITE\_BUSY](rescode.html#busy), so applications should be prepared for that happenstance.
 
@@ -171,8 +171,8 @@ Cases where a query against a WAL-mode database can return [SQLITE\_BUSY](rescod
 *   If the last connection to a database crashed, then the first new connection to open the database will start a recovery process. An exclusive lock is held during recovery. So if a third database connection tries to jump in and query while the second connection is running recovery, the third connection will get an [SQLITE\_BUSY](rescode.html#busy) error.
     
 
-10\. Backwards Compatibility
-============================
+## Backwards Compatibility
+
 
 The database file format is unchanged for WAL mode. However, the WAL file and the [wal-index](walformat.html#shm) are new concepts and so older versions of SQLite will not know how to recover a crashed SQLite database that was operating in WAL mode when the crash occurred. To prevent older versions of SQLite (prior to version 3.7.0, 2010-07-22) from trying to recover a WAL-mode database (and making matters worse) the database file format version numbers (bytes 18 and 19 in the [database header](fileformat2.html#database_header)) are increased from 1 to 2 in WAL mode. Thus, if an older version of SQLite attempts to connect to an SQLite database that is operating in WAL mode, it will report an error along the lines of "file is encrypted or is not a database".
 
@@ -182,8 +182,8 @@ One can explicitly change out of WAL mode using a pragma such as this:
 
 Deliberately changing out of WAL mode changes the database file format version numbers back to 1 so that older versions of SQLite can once again access the database file.
 
-11\. The WAL-Reset Bug
-======================
+## The WAL-Reset Bug
+
 
 On 2026-03-03, one of the SQLite developers (Dan) found and fixed a bug that could, in rare cases, lead to database corruption. We call this the "WAL-reset bug". Key points:
 
@@ -194,8 +194,8 @@ On 2026-03-03, one of the SQLite developers (Dan) found and fixed a bug that cou
 *   The bug is a data race with tight timing constraints. It is unlikely to occur in common use. The developers have never been able to reproduce the bug organically and had to add special testing logic to SQLite that deliberately triggers the circumstances of the the bug in order to verify that the issue has been fixed.
     
 
-11.1. Bug Details
------------------
+### Bug Details
+
 
 This is what happens:
 
@@ -212,8 +212,8 @@ This is what happens:
 6.  Later when a third checkpoint occurs, the third checkpoint skips all or part of the transaction that was written in step 3. Thus parts of the transaction from step 3 never reach the database file, and the database file goes corrupt.
     
 
-11.2. Low Probability Of Occurrence
------------------------------------
+### Low Probability Of Occurrence
+
 
 In order for this bug to happen, many details must align at just the right moment. So much so that the SQLite developers were unable to reproduce the bug organically in the lab. The only way the developers have been able to cause the malfunction was to modify the SQLite sources to invoke a callback controlled by [sqlite3\_test\_control()](c3ref/test_control.html) that enables a test program or script to trigger the write transaction of step 3 at just the right moment during the second checkpoint. Without that code hack, the problem has never been observed during development and testing.
 

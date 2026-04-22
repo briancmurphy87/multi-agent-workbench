@@ -1,16 +1,15 @@
+
 # File Locking And Concurrency In SQLite Version 3
    
 This document was originally created in early 2004 when SQLite version 2 was still in widespread use and was written to introduce the new concepts of SQLite version 3 to readers who were already familiar with SQLite version 2. But these days, most readers of this document have probably never seen SQLite version 2 and are only familiar with SQLite version 3. Nevertheless, this document continues to serve as an authoritative reference to how database file locking works in SQLite version 3.
 
 The document only describes locking for the older rollback-mode transaction mechanism. Locking for the newer [write-ahead log](wal.html) or [WAL mode](wal.html) is described separately.
 
-1.0 File Locking And Concurrency In SQLite Version 3
-----------------------------------------------------
+## File Locking And Concurrency In SQLite Version 3
 
 SQLite [Version 3.0.0](releaselog/3_0_0.html) introduced a new locking and journaling mechanism designed to improve concurrency over SQLite version 2 and to reduce the writer starvation problem. The new mechanism also allows atomic commits of transactions involving multiple database files. This document describes the new locking mechanism. The intended audience is programmers who want to understand and/or modify the pager code and reviewers working to verify the design of SQLite version 3.
 
-2.0 Overview
-------------
+## Overview
 
 Locking and concurrency control are handled by the [pager module](https://sqlite.org/src/finfo?name=src/pager.c). The pager module is responsible for making SQLite "ACID" (Atomic, Consistent, Isolated, and Durable). The pager module makes sure changes happen all at once, that either all changes occur or none of them do, that two or more processes do not try to access the database in incompatible ways at the same time, and that once changes have been written they persist until explicitly deleted. The pager also provides a memory cache of some of the contents of the disk file.
 
@@ -18,35 +17,34 @@ The pager is unconcerned with the details of B-Trees, text encodings, indices, a
 
 The pager module effectively controls access for separate threads, or separate processes, or both. Throughout this document whenever the word "process" is written you may substitute the word "thread" without changing the truth of the statement.
 
-3.0 Locking
------------
+## Locking
 
 From the point of view of a single process, a database file can be in one of five locking states:
 
-UNLOCKED
+### UNLOCKED
 
 No locks are held on the database. The database may be neither read nor written. Any internally cached data is considered suspect and subject to verification against the database file before being used. Other processes can read or write the database as their own locking states permit. This is the default state.
 
-SHARED
+### SHARED
 
 The database may be read but not written. Any number of processes can hold SHARED locks at the same time, hence there can be many simultaneous readers. But no other thread or process is allowed to write to the database file while one or more SHARED locks are active.
 
-RESERVED
+### RESERVED
 
 A RESERVED lock means that the process is planning on writing to the database file at some point in the future but that it is currently just reading from the file. Only a single RESERVED lock may be active at one time, though multiple SHARED locks can coexist with a single RESERVED lock. RESERVED differs from PENDING in that new SHARED locks can be acquired while there is a RESERVED lock.
 
-PENDING
+### PENDING
 
 A PENDING lock means that the process holding the lock wants to write to the database as soon as possible and is just waiting on all current SHARED locks to clear so that it can get an EXCLUSIVE lock. No new SHARED locks are permitted against the database if a PENDING lock is active, though existing SHARED locks are allowed to continue.
 
-EXCLUSIVE
+### EXCLUSIVE
 
 An EXCLUSIVE lock is needed in order to write to the database file. Only one EXCLUSIVE lock is allowed on the file and no other locks of any kind are allowed to coexist with an EXCLUSIVE lock. In order to maximize concurrency, SQLite works to minimize the amount of time that EXCLUSIVE locks are held.
 
 The operating system interface layer understands and tracks all five locking states described above. The pager module only tracks four of the five locking states. A PENDING lock is always just a temporary stepping stone on the path to an EXCLUSIVE lock and so the pager module does not track PENDING locks.
 
-4.0 The Rollback Journal
-------------------------
+## The Rollback Journal
+
 
 When a process wants to change a database file (and it is not in [WAL](wal.html) mode), it first records the original unchanged database content in a _rollback journal_. The rollback journal is an ordinary disk file that is always located in the same directory or folder as the database file and has the same name as the database file with the addition of a \-journal suffix. The rollback journal also records the initial size of the database so that if the database file grows it can be truncated back to its original size on a rollback.
 
@@ -63,7 +61,7 @@ If no super-journal is involved, then a journal is hot if it exists and has a no
     *   Its super-journal exists or the super-journal name is an empty string, and
     *   There is no RESERVED lock on the corresponding database file.
 
-### 4.1 Dealing with hot journals
+### Dealing with hot journals
 
 Before reading from a database file, SQLite always checks to see if that database file has a hot journal. If the file does have a hot journal, then the journal is rolled back before the file is read. In this way, we ensure that the database file is in a consistent state before it is read.
 
@@ -80,14 +78,14 @@ When a process wants to read from a database file, it follows the following sequ
 
 After the algorithm above completes successfully, it is safe to read from the database file. Once all reading has completed, the SHARED lock is dropped.
 
-### 4.2 Deleting stale super-journals
+### Deleting stale super-journals
 
 A stale super-journal is a super-journal that is no longer being used for anything. There is no requirement that stale super-journals be deleted. The only reason for doing so is to free up disk space.
 
 A super-journal is stale if no individual file journals are pointing to it. To figure out if a super-journal is stale, we first read the super-journal to obtain the names of all of its file journals. Then we check each of those file journals. If any of the file journals named in the super-journal exists and points back to the super-journal, then the super-journal is not stale. If all file journals are either missing or refer to other super-journals or no super-journal at all, then the super-journal we are testing is stale and can be safely deleted.
 
-5.0 Writing to a database file
-------------------------------
+## Writing to a database file
+
 
 To write to a database, a process must first acquire a SHARED lock as described above (possibly rolling back incomplete changes if there is a hot journal). After a SHARED lock is obtained, a RESERVED lock must be acquired. The RESERVED lock signals that the process intends to write to the database at some point in the future. Only one process at a time can hold a RESERVED lock. But other processes can continue to read the database while the RESERVED lock is held.
 
@@ -124,14 +122,14 @@ If a transaction involves multiple databases, then a more complex commit sequenc
 6.  Delete all individual journal files.
 7.  Drop the EXCLUSIVE and PENDING locks from all database files.
 
-### 5.1 Writer starvation
+### Writer starvation
 
 In SQLite version 2, if many processes are reading from the database, it might be the case that there is never a time when there are no active readers. And if there is always at least one read lock on the database, no process would ever be able to make changes to the database because it would be impossible to acquire a write lock. This situation is called _writer starvation_.
 
 SQLite version 3 seeks to avoid writer starvation through the use of the PENDING lock. The PENDING lock allows existing readers to continue but prevents new readers from connecting to the database. So when a process wants to write a busy database, it can set a PENDING lock which will prevent new readers from coming in. Assuming existing readers do eventually complete, all SHARED locks will eventually clear and the writer will be given a chance to make its changes.
 
-6.0 How To Corrupt Your Database Files
---------------------------------------
+## How To Corrupt Your Database Files
+
 
 The pager module is very robust but it can be subverted. This section attempts to identify and explain the risks. (See also the [Things That Can Go Wrong](atomiccommit.html#sect_9_0) section of the article on [Atomic Commit](atomiccommit.html).
 
@@ -154,8 +152,8 @@ The last (fourth) bullet above merits additional comment. When SQLite creates a 
 
 For a commit involving multiple databases and a super-journal, if the various databases were on different disk volumes and a power failure occurs during the commit, then when the machine comes back up the disks might be remounted with different names. Or some disks might not be mounted at all. When this happens the individual file journals and the super-journal might not be able to find each other. The worst outcome from this scenario is that the commit ceases to be atomic. Some databases might be rolled back and others might not. All databases will continue to be self-consistent. To defend against this problem, keep all databases on the same disk volume and/or remount disks using exactly the same names after a power failure.
 
-7.0 Transaction Control At The SQL Level
-----------------------------------------
+## Transaction Control At The SQL Level
+
 
 The changes to locking and concurrency control in SQLite version 3 also introduce some subtle changes in the way transactions work at the SQL language level. By default, SQLite version 3 operates in _autocommit_ mode. In autocommit mode, all changes to the database are committed as soon as all operations associated with the current database connection complete.
 

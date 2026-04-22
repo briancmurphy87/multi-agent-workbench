@@ -1,7 +1,7 @@
 # Transactions
 
-1\. Transaction Control Syntax
-==============================
+## Transaction Control Syntax
+
 
 **[begin-stmt:](syntax/begin-stmt.html)** hide
 
@@ -15,8 +15,8 @@ COMMIT TRANSACTION END
 
 ROLLBACK TRANSACTION TO SAVEPOINT savepoint-name
 
-2\. Transactions
-================
+## Transactions
+
 
 No reads or writes occur except within a transaction. Any command that accesses the database (basically, any SQL command, except a few [PRAGMA](pragma.html#syntax) statements) will automatically start a transaction if one is not already in effect. Automatically started transactions are committed when the last SQL statement finishes.
 
@@ -26,8 +26,8 @@ END TRANSACTION is an alias for COMMIT.
 
 Transactions created using BEGIN...COMMIT do not nest. For nested transactions, use the [SAVEPOINT](lang_savepoint.html) and [RELEASE](lang_savepoint.html) commands. The "TO SAVEPOINT name" clause of the ROLLBACK command shown in the syntax diagram above is only applicable to [SAVEPOINT](lang_savepoint.html) transactions. An attempt to invoke the BEGIN command within a transaction will fail with an error, regardless of whether the transaction was started by [SAVEPOINT](lang_savepoint.html) or a prior BEGIN. The COMMIT command and the ROLLBACK command without the TO clause work the same on [SAVEPOINT](lang_savepoint.html) transactions as they do with transactions started by BEGIN.
 
-2.1. Read transactions versus write transactions
-------------------------------------------------
+### Read transactions versus write transactions
+
 
 SQLite supports multiple simultaneous read transactions coming from separate database connections, possibly in separate threads or processes, but only one simultaneous write transaction.
 
@@ -35,8 +35,8 @@ A read transaction is used for reading only. A write transaction allows both rea
 
 While a read transaction is active, any changes to the database that are implemented by separate database connections will not be seen by the database connection that started the read transaction. If database connection X is holding a read transaction, it is possible that some other database connection Y might change the content of the database while X's transaction is still open, however X will not be able to see those changes until after the transaction ends. While its read transaction is active, X will continue to see an historic snapshot of the database prior to the changes implemented by Y.
 
-2.2. DEFERRED, IMMEDIATE, and EXCLUSIVE transactions
-----------------------------------------------------
+### DEFERRED, IMMEDIATE, and EXCLUSIVE transactions
+
 
 Transactions can be DEFERRED, IMMEDIATE, or EXCLUSIVE. The default transaction behavior is DEFERRED.
 
@@ -46,8 +46,8 @@ IMMEDIATE causes the database connection to start a new write immediately, witho
 
 EXCLUSIVE is similar to IMMEDIATE in that a write transaction is started immediately. EXCLUSIVE and IMMEDIATE are the same in [WAL mode](wal.html), but in other journaling modes, EXCLUSIVE prevents other database connections from reading the database while the transaction is underway.
 
-2.3. Implicit versus explicit transactions
-------------------------------------------
+### Implicit versus explicit transactions
+
 
 An implicit transaction (a transaction that is started automatically, not a transaction started by BEGIN) is committed automatically when the last active statement finishes. A statement finishes when its last cursor closes, which is guaranteed to happen when the prepared statement is [reset](c3ref/reset.html) or [finalized](c3ref/finalize.html). Some statements might "finish" for the purpose of transaction control prior to being reset or finalized, but there is no guarantee of this. The only way to ensure that a statement has "finished" is to invoke [sqlite3\_reset()](c3ref/reset.html) or [sqlite3\_finalize()](c3ref/finalize.html) on that statement. An open [sqlite3\_blob](c3ref/blob.html) used for incremental BLOB I/O also counts as an unfinished statement. The [sqlite3\_blob](c3ref/blob.html) finishes when it is [closed](c3ref/blob_close.html).
 
@@ -59,8 +59,8 @@ In very old versions of SQLite (before version 3.7.11 - 2012-03-20) the ROLLBACK
 
 If [PRAGMA journal\_mode](pragma.html#pragma_journal_mode) is set to OFF (thus disabling the rollback journal file) then the behavior of the ROLLBACK command is undefined.
 
-3\. Response To Errors Within A Transaction
-===========================================
+## Response To Errors Within A Transaction
+
 
 If certain kinds of errors occur within a transaction, the transaction may or may not be rolled back automatically. The errors that can cause an automatic rollback include:
 

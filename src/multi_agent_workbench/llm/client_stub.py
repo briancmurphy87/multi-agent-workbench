@@ -80,6 +80,38 @@ def _complete_text_stub(model: str, system_prompt: str, user_prompt: str) -> LLM
                 "Northstar added a streaming path and improved latency, but operators need to watch "
                 "for lag and backpressure."
             )
+    elif "sqlite" in lowered:
+        if "which engineer originally approved wal mode" in lowered:
+            text = (
+                "I do not have enough evidence in the retrieved documents to determine "
+                "which engineer originally approved WAL mode for release in SQLite."
+            )
+        elif "wal mode" in lowered and "caveat" in lowered:
+            text = (
+                "SQLite documents several WAL-mode caveats, including shared-memory "
+                "requirements, constraints around network filesystems, checkpointing, "
+                "and compatibility considerations [wal_mode-47]."
+            )
+        elif "concurrency" in lowered and "locking" in lowered:
+            text = (
+                "SQLite describes rollback-mode locking separately from WAL-mode "
+                "behavior. The locking documentation explains SQLite version 3 locking, "
+                "while the WAL documentation describes how readers and writers interact "
+                "through the WAL and wal-index [locking-0] [wal_mode-43]."
+            )
+        elif "tradeoffs" in lowered and "rollback" in lowered:
+            text = (
+                "SQLite describes WAL as adding checkpointing to the traditional read/write "
+                "rollback-journal model. WAL can improve write performance and concurrency, "
+                "but introduces checkpointing and WAL file management tradeoffs [wal_mode-7] [wal_mode-15]."
+            )
+        elif "recent sqlite releases" in lowered or "recent sqlite" in lowered:
+            text = (
+                "Recent SQLite documentation notes WAL-related bug fixes and query behavior "
+                "changes, including the WAL-reset bug discussion and recent release notes [wal_mode-48]."
+            )
+        else:
+            text = "SQLite answer synthesized from retrieved evidence [wal_mode-0]."
     else:
         text = (
             "STUB_RESPONSE\n\n"

@@ -1,4 +1,3 @@
-
 # multi-agent-workbench
 
 A compact multi-agent RAG workbench for experimenting with:
@@ -14,7 +13,11 @@ A compact multi-agent RAG workbench for experimenting with:
 
 This repo is a minimal but complete example of:
 
-> how to build, observe, and evaluate a multi-agent LLM system — and evolve it from simple orchestration to graph-based execution without breaking behavior.
+> how to build, observe, evaluate, and iteratively improve a multi-agent LLM system — and evolve it from simple orchestration to graph-based execution without breaking behavior.
+
+The project began with a deterministic fictional corpus (“Northstar”) and was later extended to operate against a real-world SQLite documentation corpus.
+
+---
 
 ## Why this repo exists
 
@@ -24,18 +27,20 @@ Most “AI agent” demos are:
 * untestable (no eval harness)
 * brittle (no retry or supervision loop)
 
-This repo is a minimal but **fully observable + testable** system that shows:
+This repo is a minimal but **fully observable + testable** system that demonstrates:
 
-* how to structure a multi-agent workflow
-* how to debug it via artifacts
-* how to evaluate it systematically
-* how to swap orchestration layers without rewriting logic
+* structured multi-agent orchestration
+* retrieval-augmented generation (RAG)
+* supervisor-driven retry loops
+* explicit execution traces and artifacts
+* dataset-driven evaluation
+* iterative improvement through eval feedback
 
 ---
 
 ## Architecture
 
-The system is built around a shared state object (`WorkbenchState`) and five agents:
+The system is built around a shared mutable state object (`WorkbenchState`) and five agents:
 
 * **Planner** → decides execution strategy
 * **Retriever** → selects relevant document chunks
@@ -45,12 +50,15 @@ The system is built around a shared state object (`WorkbenchState`) and five age
 
 Key properties:
 
-* all agents operate on shared mutable state
+* all agents operate on shared state
 * every step emits structured trace events
 * artifacts are persisted per run
 * retry is **supervisor-driven**, not heuristic
+* insufficient-evidence handling is explicitly evaluated
 
 ---
+
+## Workflow backends
 
 ### 1. SimpleWorkflow (baseline)
 
@@ -70,24 +78,26 @@ Both workflows produce identical outputs and pass the same tests.
 
 ## Quickstart
 
+Install:
+
 ```bash
 python -m pip install -e ".[dev]"
 ```
 
-Run an example:
+Run an example query:
 
 ```bash
 OPENAI_MODEL=stub-model python -m multi_agent_workbench.cli ask \
   --query "retry-demo: what changed in Northstar's ingestion pipeline and what operational caveats are mentioned in the runbook?"
 ```
 
-Then inspect:
+Inspect run artifacts:
 
 ```bash
 runs/<run_id>/
 ```
 
-Artifacts:
+Artifacts include:
 
 * `trace.json`
 * `retrieved_chunks.json`
@@ -100,17 +110,20 @@ Artifacts:
 
 ### Query
 
-```
+```text
 retry-demo: what changed in Northstar's ingestion pipeline and what operational caveats are mentioned in the runbook?
 ```
 
 ### Planner decision
+
 From:
-```
+
+```python
 state.artifacts["planner"]
 ```
 
 Content:
+
 ```json
 {
   "mode": "retrieve",
@@ -123,8 +136,7 @@ Content:
 
 ### Retrieved evidence (top chunks)
 
-Output snippet of form `[{doc_id}]` followed by first ~1-2 lines
-```
+```text
 [release_notes-0]
 Northstar v2.4 introduced a streaming ingestion path...
 reduced latency to under 90 seconds...
@@ -138,22 +150,23 @@ Northstar historically used a batch-first ingestion design...
 ```
 
 ### Critic verdict
-From:
-```
-state.critic_verdict
-```
-Content: 
-```
+
+```text
 retry_with_citations
 ```
-Meaning: The first draft answer lacked sufficient grounding.
+
+Meaning: the first draft answer lacked sufficient grounding.
 
 ### Supervisor decision
+
 From:
-```
+
+```python
 state.artifacts["supervisor"]
 ```
+
 Content:
+
 ```json
 {
   "action": "retry_responder",
@@ -162,138 +175,125 @@ Content:
 ```
 
 ### Final answer
-From:
-```
-final_answer.md
-```
-Content: 
-```
+
+```text
 Northstar moved from a batch-first ingestion design to adding a streaming path for high-priority traffic, reducing latency to under 90 seconds [release_notes-0].
 
 The runbook notes that if stream processor lag exceeds 5 minutes, operators should divert traffic to the batch fallback path, and memory pressure is a key indicator of backpressure [runbook-0].
 ```
+
+---
 
 ## What this demonstrates
 
 * planner routes correctly to retrieval
 * retriever surfaces relevant cross-document evidence
 * responder synthesizes an answer
-* critic detects missing citations
+* critic detects insufficient grounding
 * supervisor triggers retry
 * retry produces improved grounded output
 
 ---
 
-## Evaluation summary
+## Real-world corpus: SQLite documentation
 
-Run:
+After validating the workflow on a deterministic fictional corpus, the system was extended to run against a real documentation corpus built from selected SQLite docs.
 
-```bash
-python -m multi_agent_workbench.cli eval
+Corpus location:
+
+```text
+data/corpus/sqlite/
 ```
 
-Writes output to:
+Included topics:
 
+* SQLite architecture
+* WAL mode
+* file locking and concurrency
+* transactions
+* limits
+* recent release changes
+
+Example real-world queries:
+
+```text
+What caveats does SQLite document for WAL mode?
 ```
-evals/summaries/summary.json
+
+```text
+How does SQLite describe concurrency behavior across WAL mode and locking?
 ```
 
-Example metrics:
-
-* planner accuracy
-* retrieval correctness
-* supervisor action accuracy
-* retry execution correctness
-
-This turns the system into something you can **measure, not just demo**.
-
-Snippet of output content:
-```json
-{
-  "num_cases": 4,
-  "avg_keyword_hit_rate": 0.3958333333333333,
-  "retrieval_accuracy": 0.75,
-  "planner_mode_accuracy": 0.75,
-  "planner_tools_accuracy": 1.0,
-  "planner_retrieval_accuracy": 0.75,
-  "supervisor_action_accuracy": 1.0,
-  "insufficient_evidence_accuracy": 1.0,
-  "retry_execution_accuracy": 1.0,
-  "results": [
-    {
-      "case_id": "northstar_change_summary",
-      "query": "What changed in Northstar's ingestion pipeline between the current architecture and the latest release, and are there any operational caveats mentioned in the runbook?",
-      "planner_decision": {
-        "mode": "retrieve",
-        "needs_retrieval": true,
-        "needs_tools": false,
-        "answer_strategy": "synthesize_across_docs",
-        "rationale": "The query asks for synthesis across multiple documents."
-      },
-...
-    {
-      "case_id": "northstar_runbook_only",
-      "query": "What operational caveats does the Northstar runbook mention for v2.4?",
-      "planner_decision": {
-        "mode": "retrieve",
-        "needs_retrieval": true,
-        "needs_tools": false,
-        "answer_strategy": "synthesize_across_docs",
-        "rationale": "The query asks for synthesis across multiple documents."
-      },
-      "supervisor_decision": {
-        "action": "accept",
-        "rationale": "Critic accepted the answer and a draft is present.",
-        "retry_instruction": null
-      },
-      "critic_verdict": "accept",
-      "retrieved_count": 5,
-      "retry_count": 0,
-      "final_answer": "STUB_RESPONSE\n\nSystem prompt: You are a careful research assistant. Answer only from provided evidence. If evidence is insufficient, say so. Include c...\nUser prompt: Question:\nWhat operational caveats does the Northstar runbook mention for v2.4?\n\nEvidence:\n[runbook-0] # Runbook\n\nOperational caveats for Northstar v2.4:\n\n- If stream processor lag exceeds 5 minutes, operators should divert high-priority tr...",
-      "score": {
-        "keyword_hit_rate": 0.25,
-        "retrieval_used_correctly": true,
-        "produced_answer": true,
-        "planner_mode_correct": true,
-        "planner_tools_correct": true,
-        "planner_retrieval_correct": true,
-        "supervisor_action_correct": true,
-        "insufficient_evidence_handled_correctly": true,
-        "retry_executed_correctly": true
-      }
-    }
-  ]
-}
+```text
+What are the tradeoffs between WAL mode and traditional rollback journaling?
 ```
+
+```text
+Which engineer originally approved WAL mode for release in SQLite?
+```
+
+The final query above is intentionally unanswerable from the corpus and is used to validate insufficient-evidence handling.
+
 ---
 
-## Real corpora (beyond the toy example)
+## SQLite evaluation suite
 
-The repo includes a small fictional corpus (**Northstar**) for deterministic tests.
+Run SQLite evals:
 
-The same system can be run against real-world documentation, such as:
+```bash
+OPENAI_MODEL=stub-model python -m multi_agent_workbench.cli eval \
+  --cases-dir evals/cases_sqlite \
+  --corpus-dir data/corpus/sqlite \
+  --outputs-dir evals/outputs_sqlite \
+  --summaries-dir evals/summaries_sqlite
+```
 
-* SQLite docs (recommended first target)
-* Kubernetes docs
-* RFCs (e.g. HTTP / RFC 9110)
-* Python documentation
+Latest summary:
 
-Example real queries:
+```json
+{
+  "num_cases": 5,
+  "retrieval_accuracy": 1.0,
+  "planner_mode_accuracy": 1.0,
+  "planner_tools_accuracy": 1.0,
+  "planner_retrieval_accuracy": 1.0,
+  "supervisor_action_accuracy": 1.0,
+  "insufficient_evidence_accuracy": 1.0,
+  "retry_execution_accuracy": 1.0
+}
+```
 
-* “What changed in SQLite JSON support across recent releases?”
-* “What operational caveats are mentioned for WAL mode?”
-* “How does Kubernetes describe Deployment vs StatefulSet tradeoffs?”
+This demonstrates:
+
+* planner routing generalized from toy docs to real technical documentation
+* retrieval surfaced SQLite evidence across WAL, locking, transactions, and release notes
+* critic/supervisor loop handled both grounded answers and insufficient-evidence cases
+* eval metrics were used to diagnose and fix planner-routing, citation-detection, and insufficient-evidence behavior
+
+---
+
+## Eval-driven iteration
+
+The SQLite corpus exposed several realistic failure modes:
+
+1. Planner initially routed SQLite questions as direct-answer queries instead of retrieval queries.
+2. The critic initially accepted stub answers because bracketed chunk IDs in echoed evidence were mistaken for citations.
+3. Insufficient-evidence answers were initially mishandled because explicit refusal language was treated as uncited output.
+
+Each issue was fixed through targeted changes and rerun against the same eval suite until the workflow produced correct planner, retrieval, retry, supervisor, and insufficient-evidence behavior.
+
+This iterative eval/debug/fix loop was a core design goal of the project.
 
 ---
 
 ## Project structure
 
-```
+```text
 agents/           → planner, retriever, responder, critic, supervisor
 workflows/        → SimpleWorkflow + LangGraphWorkflow
 state/            → shared state model
 retrieval/        → corpus + chunking
-evals/            → dataset + scoring
+evals/            → datasets + scoring
 observability/    → traces + artifact writers
 llm/              → stub + OpenAI client
 ```
@@ -302,21 +302,22 @@ llm/              → stub + OpenAI client
 
 ## What’s interesting here (for engineers)
 
-* explicit state machine vs graph orchestration comparison
-* supervisor-driven retry loop (bounded, testable)
+* explicit imperative vs graph orchestration comparison
+* supervisor-driven retry loop (bounded and testable)
 * artifact-first debugging (not prompt guessing)
 * eval harness integrated into development loop
-* easy extension point for tools, memory, or multi-step planning
+* real-corpus iteration and failure analysis
+* extensible architecture for additional agents, tools, or corpora
 
 ---
 
 ## Next extensions
 
-* real-world corpus ingestion (SQLite / RFCs)
+* semantic eval scoring beyond keyword matching
 * tool-use agent (search, calculator, API calls)
-* multi-hop planning (planner chaining steps)
-* caching + cost tracking
-* UI for trace visualization
+* multi-hop planning
+* embedding-backed retrieval
+* cost and latency tracking
+* trace visualization UI
 
 ---
-

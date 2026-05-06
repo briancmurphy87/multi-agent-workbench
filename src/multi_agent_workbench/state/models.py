@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field
 from multi_agent_workbench.agents.planner_models import PlannerDecision
 
 
-@dataclass
-class RetrievedChunk:
+# @dataclass
+class RetrievedChunk(BaseModel):
     doc_id: str
     chunk_id: str
     text: str

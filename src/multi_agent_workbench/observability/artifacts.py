@@ -37,7 +37,7 @@ def write_run_artifacts_to_dir(state: WorkbenchState, run_dir: Path) -> Path:
         encoding="utf-8",
     )
     (run_dir / "retrieved_chunks.json").write_text(
-        json.dumps([asdict(chunk) for chunk in state.retrieved_chunks], indent=2),
+        json.dumps([chunk.model_dump_json() for chunk in state.retrieved_chunks], indent=2),
         encoding="utf-8",
     )
     (run_dir / "artifacts.json").write_text(

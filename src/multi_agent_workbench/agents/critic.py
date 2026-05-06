@@ -30,6 +30,9 @@ class CriticAgent:
         elif asks_for_specific_attribution and not _evidence_supports_attribution_query(evidence_text):
             verdict = "accept_with_insufficient_evidence"
 
+        elif _answer_explicitly_declines(answer):
+            verdict = "accept_with_insufficient_evidence"
+
         elif not has_valid_citation:
             verdict = "retry_with_citations"
 
@@ -82,3 +85,17 @@ def _evidence_supports_attribution_query(evidence_text: str) -> bool:
         "engineer",
     ]
     return any(marker in evidence_text for marker in attribution_evidence_markers)
+
+def _answer_explicitly_declines(answer: str) -> bool:
+    lowered = answer.lower()
+
+    decline_markers = [
+        "not enough evidence",
+        "cannot determine",
+        "cannot answer",
+        "cannot answer confidently",
+        "insufficient evidence",
+        "do not have enough evidence",
+    ]
+
+    return any(marker in lowered for marker in decline_markers)

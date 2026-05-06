@@ -51,6 +51,7 @@ def score_case(
                 phrase in answer
                 for phrase in [
                     "not enough evidence",
+                    "do not have enough evidence",
                     "insufficient",
                     "not provided",
                     "cannot answer confidently",
